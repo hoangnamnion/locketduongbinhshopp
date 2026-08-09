@@ -7,6 +7,7 @@
     <link href="/assets/images/favicon.ico" rel="icon" type="image/x-icon"/>
     <link href="/assets/css/app-Bjnb32xO.css" rel="stylesheet"/>
     <link href="/assets/css/style.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-[#FFFCEB] dark:bg-gray-900 text-text dark:text-gray-200 font-sans antialiased min-h-screen relative overflow-x-hidden">
     <!-- Nền ảnh -->
@@ -26,7 +27,7 @@
                     <a class="text-sm font-bold text-gray-900 hover:text-accent transition-colors" href="index.html">Trang chủ</a>
                     <a class="text-sm font-bold text-gray-600 hover:text-accent transition-colors" href="activate.html">Kích hoạt</a>
                     <a class="text-sm font-bold text-gray-600 hover:text-accent transition-colors" href="index.html#pricing">Bảng giá</a>
-                    <a class="text-sm font-bold text-gray-600 hover:text-accent transition-colors" href="activate.html">Hướng dẫn</a>
+                    <a class="text-sm font-bold text-gray-600 hover:text-accent transition-colors" href="index.html#how-to-upgrade">Hướng dẫn</a>
                     <a class="text-sm font-bold text-gray-600 hover:text-accent transition-colors" href="index.html#faq">Hỗ trợ</a>
                 </nav>
                 <div class="flex items-center gap-4">
@@ -46,15 +47,32 @@
                 <svg class="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
                 Hồ sơ cá nhân
             </h1>
-            <p class="text-sm text-gray-500 mt-1 ml-8">Quản lý thông tin tài khoản của bạn</p>
+            <p class="text-sm text-gray-500 mt-1 ml-8">Quản lý thông tin tài khoản và ví tiền của bạn</p>
         </div>
 
         <!-- Banner Card -->
-        <div class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 flex flex-col items-center border border-white/50">
+        <div class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-6 flex flex-col items-center border border-white/50">
             <img id="pf-avatar" src="/assets/images/default-avatar.png" class="w-20 h-20 rounded-full object-cover shadow-md mb-4 bg-gray-100" />
             <h2 id="pf-display-name" class="text-xl font-bold text-gray-900">Name Here</h2>
             <p id="pf-username" class="text-sm text-gray-500 mb-2">@username</p>
-            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">Chưa kích hoạt</span>
+            <span class="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">Khách hàng</span>
+        </div>
+
+        <!-- Wallet Card -->
+        <div class="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-[24px] p-6 sm:p-8 shadow-xl mb-8 border border-amber-400/30 relative overflow-hidden">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+                <div>
+                    <div class="flex items-center gap-2 text-amber-100 text-xs font-bold uppercase tracking-wider mb-2">
+                        <i class="fa-solid fa-wallet"></i> Ví tiền cá nhân
+                    </div>
+                    <div class="text-3xl sm:text-4xl font-black tracking-tight" id="pf-balance">0đ</div>
+                    <p class="text-xs text-amber-100/90 mt-2 font-medium">Sử dụng số dư ví để kích hoạt Locket Gold bất kỳ lúc nào</p>
+                </div>
+                <button onclick="openDepositModal()" class="w-full sm:w-auto px-6 py-3.5 bg-white hover:bg-amber-50 text-amber-700 font-extrabold text-sm rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer">
+                    <i class="fa-solid fa-circle-plus text-amber-600 text-base"></i>
+                    Nạp tiền vào ví
+                </button>
+            </div>
         </div>
 
         <!-- Flex Columns -->
@@ -99,30 +117,256 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Mật khẩu hiện tại</label>
-                        <input type="password" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                        <div class="relative">
+                            <input type="password" id="cur-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                            <button type="button" onclick="togglePassVisibility('cur-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Mật khẩu mới</label>
-                        <input type="password" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                        <div class="relative">
+                            <input type="password" id="new-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                            <button type="button" onclick="togglePassVisibility('new-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Xác nhận mật khẩu mới</label>
-                        <input type="password" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                        <div class="relative">
+                            <input type="password" id="cfm-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
+                            <button type="button" onclick="togglePassVisibility('cfm-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                        </div>
                     </div>
-                    <button class="w-full mt-4 py-3 bg-gray-900 hover:bg-black text-white font-bold text-sm tracking-wide rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                    <button class="w-full mt-4 py-3 bg-gray-900 hover:bg-black text-white font-bold text-sm tracking-wide rounded-xl shadow-md transition-all flex items-center justify-center gap-2 btn-shimmer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                         Cập nhật mật khẩu
                     </button>
+                    <script>
+                    function togglePassVisibility(id, btn) {
+                        const inp = document.getElementById(id);
+                        if (inp.type === 'password') {
+                            inp.type = 'text';
+                            btn.textContent = '🔒';
+                        } else {
+                            inp.type = 'password';
+                            btn.textContent = '👁️';
+                        }
+                    }
+                    </script>
                 </div>
             </div>
         </div>
     </main>
     
-    <!-- Alpine JS is needed for some components. Ensure we have the script runner -->
+    <!-- Deposit Modal -->
+    <div id="deposit-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-zinc-900 rounded-[28px] max-w-lg w-full p-6 sm:p-8 shadow-2xl relative border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto">
+            <button onclick="closeDepositModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-gray-100 dark:bg-zinc-800 text-gray-500 hover:text-gray-900 flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-white">Nạp tiền vào ví LocketGold</h3>
+                    <p class="text-xs text-gray-500">Chuyển khoản tự động 24/7 qua QR SePay</p>
+                </div>
+            </div>
+
+            <!-- Step A: Select Amount -->
+            <div id="dep-step-1">
+                <label class="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-2">Chọn hoặc nhập số tiền nạp (VNĐ)</label>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <button type="button" onclick="selectPresetAmt(20000)" class="preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all">20.000đ</button>
+                    <button type="button" onclick="selectPresetAmt(50000)" class="preset-btn py-2.5 px-3 rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-xs font-bold text-amber-700 dark:text-amber-300 transition-all">50.000đ</button>
+                    <button type="button" onclick="selectPresetAmt(100000)" class="preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all">100.000đ</button>
+                    <button type="button" onclick="selectPresetAmt(200000)" class="preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all">200.000đ</button>
+                    <button type="button" onclick="selectPresetAmt(500000)" class="preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all">500.000đ</button>
+                    <button type="button" onclick="selectPresetAmt(1000000)" class="preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all">1.000.000đ</button>
+                </div>
+                
+                <input type="number" id="dep-custom-amt" min="10000" step="5000" value="50000" class="w-full px-4 py-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-amber-400 transition-all mb-4" placeholder="Nhập số tiền tự do (tối thiểu 10.000đ)">
+
+                <button onclick="startDepositOrder()" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <span>Tạo mã QR nạp tiền</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Step B: QR Payment Display -->
+            <div id="dep-step-2" class="hidden">
+                <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 text-center mb-5">
+                    <div id="dep-qr-img-wrap" class="flex justify-center mb-3">
+                        <div class="w-48 h-48 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl text-amber-500"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-800 dark:text-amber-200 font-semibold">Mở ứng dụng Ngân hàng / Ví điện tử để quét mã QR</p>
+                </div>
+
+                <div class="space-y-2.5 text-xs mb-6">
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-gray-500">Ngân hàng:</span>
+                        <span class="font-bold text-gray-900 dark:text-white">MB Bank</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-gray-500">Số tài khoản:</span>
+                        <span class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>0567355688888</span>
+                            <button onclick="navigator.clipboard.writeText('0567355688888'); alert('Đã sao chép số tài khoản!');" class="px-2 py-0.5 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 rounded font-semibold text-[11px] hover:bg-gray-200 cursor-pointer">Copy</button>
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-gray-500">Chủ tài khoản:</span>
+                        <span class="font-bold text-gray-900 dark:text-white">DO BINH DUONG</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-gray-500">Số tiền:</span>
+                        <span id="dep-confirm-amt" class="font-extrabold text-amber-600 text-sm">50.000đ</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                        <span class="text-gray-500">Nội dung chuyển khoản:</span>
+                        <span class="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                            <span id="dep-confirm-content">ND...</span>
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('dep-confirm-content').textContent); alert('Đã sao chép nội dung!');" class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded font-semibold text-[11px] cursor-pointer">Copy</button>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-300 rounded-xl text-xs font-semibold">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>Đang chờ nhận tiền chuyển khoản (Tự động)...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alpine JS & Script -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="/assets/js/script.js"></script>
 
     <script>
+        const WORKER_URL = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev';
+        const SEPAY_CONFIG = {
+            bankCode: 'MB',
+            accountNumber: '0567355688888',
+            accountName: 'DO BINH DUONG',
+        };
+
+        let depPollInterval = null;
+        let activeDepOrderId = null;
+
+        async function fetchUserWallet() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const res = await fetch(WORKER_URL + '/api/wallet', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const bal = data.balance || 0;
+                    document.getElementById('pf-balance').textContent = bal.toLocaleString('vi-VN') + 'đ';
+                    const userStr = localStorage.getItem('user');
+                    if (userStr) {
+                        try {
+                            const u = JSON.parse(userStr);
+                            u.balance = bal;
+                            localStorage.setItem('user', JSON.stringify(u));
+                        } catch(e){}
+                    }
+                }
+            } catch(e){}
+        }
+
+        function openDepositModal() {
+            document.getElementById('dep-step-1').classList.remove('hidden');
+            document.getElementById('dep-step-2').classList.add('hidden');
+            document.getElementById('deposit-modal').classList.remove('hidden');
+            document.getElementById('deposit-modal').classList.add('flex');
+        }
+
+        function closeDepositModal() {
+            if (depPollInterval) { clearInterval(depPollInterval); depPollInterval = null; }
+            document.getElementById('deposit-modal').classList.add('hidden');
+            document.getElementById('deposit-modal').classList.remove('flex');
+        }
+
+        function selectPresetAmt(amt) {
+            document.getElementById('dep-custom-amt').value = amt;
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                if (btn.textContent.includes(amt.toLocaleString('vi-VN'))) {
+                    btn.className = 'preset-btn py-2.5 px-3 rounded-xl border border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-xs font-bold text-amber-700 dark:text-amber-300 transition-all';
+                } else {
+                    btn.className = 'preset-btn py-2.5 px-3 rounded-xl border border-gray-200 dark:border-zinc-700 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-all';
+                }
+            });
+        }
+
+        async function startDepositOrder() {
+            const userStr = localStorage.getItem('user');
+            let usernameObj = 'khachhang';
+            if (userStr) { try { usernameObj = JSON.parse(userStr).username || 'khachhang'; } catch(e){} }
+
+            const amtStr = document.getElementById('dep-custom-amt').value;
+            const amount = parseInt(amtStr || '0', 10);
+            if (isNaN(amount) || amount < 10000) return alert('Số tiền nạp tối thiểu là 10.000đ!');
+
+            // 1. Tạo Mã Đơn Nạp Tiền (ND + timestamp) ngay lập tức tại Client
+            activeDepOrderId = "ND" + Date.now().toString(36).toUpperCase().slice(-6);
+            const content = activeDepOrderId;
+
+            // 2. Render ngay lập tức QR Code & Thông tin Chuyển khoản (Không chờ server)
+            const primaryQr = `https://vietqr.app/img?acc=${SEPAY_CONFIG.accountNumber}&bank=${SEPAY_CONFIG.bankCode}&amount=${amount}&des=${encodeURIComponent(content)}&holder=${encodeURIComponent(SEPAY_CONFIG.accountName)}`;
+            const fallbackQr = `https://img.vietqr.io/image/${SEPAY_CONFIG.bankCode}-${SEPAY_CONFIG.accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(SEPAY_CONFIG.accountName)}`;
+
+            document.getElementById('dep-qr-img-wrap').innerHTML = `<img src="${primaryQr}" onerror="this.onerror=null; this.src='${fallbackQr}';" alt="QR Nạp Tiền" class="w-48 h-48 rounded-xl object-contain shadow-md bg-white p-1 border border-gray-200">`;
+            document.getElementById('dep-confirm-amt').textContent = amount.toLocaleString('vi-VN') + 'đ';
+            document.getElementById('dep-confirm-content').textContent = content;
+
+            // 3. Chuyển sang Bước 2 (Hiển thị QR Code) lập tức!
+            document.getElementById('dep-step-1').classList.add('hidden');
+            document.getElementById('dep-step-2').classList.remove('hidden');
+
+            // 4. Gửi ngầm đơn nạp tiền lên Server KV để lưu vết
+            const token = localStorage.getItem('token');
+            fetch(WORKER_URL + '/api/create-deposit', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': 'Bearer ' + (token || '') 
+                },
+                body: JSON.stringify({ orderId: activeDepOrderId, amount, username: usernameObj })
+            }).catch(e => console.log('Lưu đơn nạp ngầm:', e));
+
+            // 5. Bắt đầu Polling tự động kiểm tra số dư
+            startDepPolling();
+        }
+
+        function startDepPolling() {
+            if (depPollInterval) clearInterval(depPollInterval);
+            depPollInterval = setInterval(async () => {
+                if (!activeDepOrderId) return;
+                try {
+                    const res = await fetch(WORKER_URL + '/api/check-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: activeDepOrderId })
+                    });
+                    const data = await res.json();
+                    if (data.paid && data.status === 'success') {
+                        clearInterval(depPollInterval);
+                        depPollInterval = null;
+                        
+                        alert('🎉 CHÚC MỪNG! Bạn đã nạp thành công ' + document.getElementById('dep-confirm-amt').textContent + ' vào ví!');
+                        closeDepositModal();
+                        fetchUserWallet();
+                    }
+                } catch(e){}
+            }, 3500);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const userStr = localStorage.getItem('user');
             if (userStr) {
@@ -137,12 +381,13 @@
                     document.getElementById('input-username').value = user.username;
                     document.getElementById('input-email').value = user.email || '';
                     
-                    // Lấy random avatar theo tên
                     document.getElementById('pf-avatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=random&color=fff&size=200`;
                     
-                    // Ngày tạo fake hiện tại
                     const now = new Date();
                     document.getElementById('pf-date').textContent = now.toLocaleDateString('vi-VN') + ' ' + now.getHours() + ':' + now.getMinutes().toString().padStart(2,'0');
+
+                    // Lấy số dư ví thực từ server
+                    fetchUserWallet();
 
                 } catch(e) {}
             } else {

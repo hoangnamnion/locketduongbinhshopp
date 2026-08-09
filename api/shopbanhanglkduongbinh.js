@@ -1,139 +1,574 @@
+/**
+ * Cloudflare Worker - LocketGold Shop Backend
+ * KV Namespaces cần bind:
+ *   - LOCKET_USERS : lưu user accounts
+ *   - LOCKET_ORDERS: lưu đơn hàng kích hoạt
+ *
+ * Environment Variables cần set trên dashboard:
+ *   - ADMIN_PASSWORD : mật khẩu admin dashboard
+ *   - ADMIN_SECRET   : secret key cho API admin (UUID bất kỳ)
+ *   - SEPAY_SECRET   : webhook secret từ SePay
+ */
+
 export default {
   async fetch(request, env) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*", // Phù hợp với mọi tên miền
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Admin-Key",
     };
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: cors });
     }
+
+    const json = (data, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+
+    const url = new URL(request.url);
+    const path = url.pathname;
 
     try {
-      const url = new URL(request.url);
+      // ─────────────────────────────────────────────
+      // AUTH: REGISTER
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/register") {
+        const { username, password, email } = await request.json();
+        if (!username || !password) return json({ success: false, message: "Thiếu thông tin!" });
 
-      if (request.method === "POST" && url.pathname === "/api/register") {
-        const body = await request.json();
-        const { username, password, email } = body;
+        const key = `user_${username.toLowerCase()}`;
+        if (await env.LOCKET_USERS.get(key)) return json({ success: false, message: "Tên đăng nhập đã tồn tại!" });
 
-        if (!username || !password) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Thiếu thông tin đăng ký!",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        const userKey = `user_${username.toLowerCase()}`;
-        // Kiểm tra xem User đã tồn tại trong mảng KV tên là LOCKET_USERS chưa
-        const existingUser = await env.LOCKET_USERS.get(userKey);
-
-        if (existingUser) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Tên đăng nhập đã tồn tại!",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        // Lưu user vào KV
-        const userData = { username, password, email, createdAt: Date.now() };
-        await env.LOCKET_USERS.put(userKey, JSON.stringify(userData));
-
-        return new Response(
-          JSON.stringify({ success: true, message: "Đăng ký thành công!" }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        await env.LOCKET_USERS.put(key, JSON.stringify({
+          username, password, email,
+          balance: 0,
+          createdAt: Date.now()
+        }));
+        return json({ success: true, message: "Đăng ký thành công!" });
       }
 
-      if (request.method === "POST" && url.pathname === "/api/login") {
-        const body = await request.json();
-        const { username, password } = body;
+      // ─────────────────────────────────────────────
+      // AUTH: LOGIN
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/login") {
+        const { username, password } = await request.json();
+        if (!username || !password) return json({ success: false, message: "Vui lòng nhập đủ thông tin!" });
 
-        if (!username || !password) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Vui lòng nhập đủ thông tin!",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
+        const key = `user_${username.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(key);
+        if (!raw) return json({ success: false, message: "Tài khoản không tồn tại!" });
 
-        const userKey = `user_${username.toLowerCase()}`;
-        const userDataString = await env.LOCKET_USERS.get(userKey);
+        const user = JSON.parse(raw);
+        if (user.password !== password) return json({ success: false, message: "Mật khẩu không chính xác!" });
 
-        if (!userDataString) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Tài khoản không tồn tại!",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
+        const token = "KV-TOKEN-" + Math.random().toString(36).substr(2);
+        // Save token → user mapping (expires 24h)
+        await env.LOCKET_USERS.put(`token_${token}`, key, { expirationTtl: 86400 });
 
-        const userData = JSON.parse(userDataString);
-
-        if (userData.password !== password) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Mật khẩu không chính xác!",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        // Trả về token và dữ liệu (bạn có thể cải tiến tạo JWT token ở đây thay vì trả chuỗi cứng)
-        return new Response(
-          JSON.stringify({
-            success: true,
-            token: "KV-TOKEN-" + Math.random().toString(36).substr(2),
-            user: { username: userData.username, email: userData.email },
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        return json({
+          success: true,
+          token,
+          user: { username: user.username, email: user.email, balance: user.balance || 0 }
+        });
       }
 
-      // Fallback cho URL khác
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Endpoint không hợp lệ hoặc đã bị chặn.",
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      // ─────────────────────────────────────────────
+      // PROXY LOCKET INFO
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/locket-info") {
+        const { username } = await request.json();
+        if (!username) return json({ success: false, message: "Thiếu username" });
+
+        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
+        const locketRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, action: "info", device_id: deviceId })
+        });
+        const data = await locketRes.json();
+        
+        // Nếu trả về lỗi chưa duyệt, báo rõ tên device cần duyệt
+        if (data.error === "DEVICE_NOT_APPROVED") {
+            return json({ success: false, error: `ADMIN ƠI, BẠN CHƯA DUYỆT THIẾT BỊ. VUI LÒNG DUYỆT THIẾT BỊ CÓ TÊN LÀ: ${deviceId}` });
+        }
+        return json(data);
+      }
+
+      // ─────────────────────────────────────────────
+      // WALLET: Get balance (requires auth token)
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/wallet") {
+        const user = await getUserFromToken(request, env);
+        if (!user) return json({ success: false, message: "Chưa xác thực!" }, 401);
+        return json({ success: true, balance: user.balance || 0 });
+      }
+
+      // ─────────────────────────────────────────────
+      // PAY: via Wallet (deduct balance)
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/pay-wallet") {
+        let user = await getUserFromToken(request, env);
+        const reqBody = await request.json();
+        const { orderId, amount, username: locketUsername, plan, user: fallbackUsername } = reqBody;
+
+        if (!user && fallbackUsername) {
+          const userKey = `user_${fallbackUsername.toLowerCase()}`;
+          const raw = await env.LOCKET_USERS.get(userKey);
+          if (raw) user = JSON.parse(raw);
+        }
+
+        if (!user) return json({ success: false, message: "Vui lòng đăng nhập lại để sử dụng ví!" }, 401);
+        if (!orderId || !amount || !locketUsername) return json({ success: false, message: "Thiếu thông tin đơn hàng!" });
+
+        const currentBalance = Number(user.balance || 0);
+        const payAmount = Number(amount);
+
+        if (currentBalance < payAmount) {
+          return json({ success: false, message: `Số dư ví không đủ (${currentBalance.toLocaleString('vi-VN')}đ < ${payAmount.toLocaleString('vi-VN')}đ). Vui lòng nạp thêm tiền vào ví!` });
+        }
+
+        // Deduct balance & track spent
+        user.balance = currentBalance - payAmount;
+        user.totalSpent = Number(user.totalSpent || 0) + payAmount;
+        const userKey = `user_${user.username.toLowerCase()}`;
+        await env.LOCKET_USERS.put(userKey, JSON.stringify(user));
+
+        // Trigger kick Gold (an toàn tại Server)
+        let kickData = { success: false, error: "Chưa thử kích hoạt" };
+        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
+        try {
+          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: locketUsername, action: "kick", device_id: deviceId })
+          });
+          kickData = await kickRes.json();
+        } catch (e) {
+          kickData = { success: false, error: e.message };
+        }
+
+        // Save order
+        const order = {
+          orderId, username: locketUsername, plan, amount: payAmount,
+          payMethod: 'wallet', status: kickData.success ? 'success' : 'kick_failed',
+          kick_result: kickData,
+          created_at: Date.now(), paid_at: Date.now(),
+          paidBy: user.username
+        };
+        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+
+        if (!kickData.success) {
+            return json({ success: false, message: "Trừ tiền ví thành công nhưng lỗi KICK GOLD: " + (kickData.error || "Unknown"), newBalance: user.balance });
+        }
+        return json({ success: true, message: "Thanh toán & Kích hoạt Gold thành công!", newBalance: user.balance });
+      }
+
+      // ─────────────────────────────────────────────
+      // CREATE DEPOSIT ORDER: nạp tiền vào ví
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/create-deposit") {
+        let user = await getUserFromToken(request, env);
+        const reqBody = await request.json();
+        const { orderId: customOrderId, amount, username: fallbackUsername } = reqBody;
+
+        if (!user && fallbackUsername) {
+          const userKey = `user_${fallbackUsername.toLowerCase()}`;
+          const raw = await env.LOCKET_USERS.get(userKey);
+          if (raw) user = JSON.parse(raw);
+          else user = { username: fallbackUsername };
+        }
+
+        const username = user ? user.username : (fallbackUsername || "khachhang");
+        const numAmt = Number(amount) || 10000;
+        const orderId = customOrderId || ("ND" + Date.now().toString(36).toUpperCase().slice(-6));
+
+        const depositOrder = {
+          orderId,
+          type: 'deposit',
+          username: username,
+          amount: numAmt,
+          payMethod: 'sepay',
+          status: 'pending',
+          created_at: Date.now()
+        };
+        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(depositOrder), { expirationTtl: 7200 }); // 2 hours
+
+        return json({ success: true, orderId, amount: numAmt, username });
+      }
+
+      // ─────────────────────────────────────────────
+      // CREATE ORDER: for SePay payment
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/create-order") {
+        const { username, plan, planName, amount } = await request.json();
+        if (!username || !plan || !amount) return json({ success: false, message: "Thiếu thông tin!" });
+
+        const orderId = "LG" + Date.now().toString(36).toUpperCase().slice(-6);
+        const order = {
+          orderId, username, plan, planName, amount,
+          payMethod: 'sepay', status: 'pending',
+          created_at: Date.now()
+        };
+        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order), { expirationTtl: 3600 }); // 1 hour
+
+        return json({ success: true, orderId });
+      }
+
+      // ─────────────────────────────────────────────
+      // CHECK PAYMENT / DEPOSIT: polling from frontend
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/check-payment") {
+        const { orderId } = await request.json();
+        if (!orderId) return json({ success: false, message: "Thiếu orderId!" });
+
+        const raw = await env.LOCKET_ORDERS.get(`order_${orderId}`);
+        if (!raw) return json({ paid: false });
+
+        const order = JSON.parse(raw);
+        // Lấy lại số dư mới nếu là nạp tiền
+        let newBalance = undefined;
+        if (order.type === 'deposit' && order.status === 'success') {
+          const userRaw = await env.LOCKET_USERS.get(`user_${order.username.toLowerCase()}`);
+          if (userRaw) {
+            newBalance = JSON.parse(userRaw).balance || 0;
+          }
+        }
+
+        return json({ 
+          paid: order.status === 'success' || order.status === 'kick_failed', 
+          status: order.status,
+          order: order,
+          newBalance
+        });
+      }
+
+      // ─────────────────────────────────────────────
+      // SEPAY WEBHOOK: auto confirm payment & deposit
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/sepay-webhook") {
+        const body = await request.json();
+
+        // Verify webhook secret (SePay gửi header X-Sepay-Webhook-Token)
+        const secret = request.headers.get("X-Sepay-Webhook-Token");
+        const ALLOWED_SECRET = "QL3SRMHAYKYKGSF9WSIIEDL15BIWVYXV05PCP4URTIUF0SX1ZPEJZAGHZEA28CNK";
+        
+        if (secret !== ALLOWED_SECRET && secret !== env.SEPAY_SECRET) {
+            return json({ error: "Unauthorized endpoint" }, 401);
+        }
+
+        // SePay payload: { content, transferAmount, id, ... }
+        const content = (body.content || "").toUpperCase();
+
+        // XỬ LÝ NẠP TIỀN VÀO VÍ (Mã đơn ND... hoặc ND_...)
+        const matchND = content.match(/ND([A-Z0-9]+)/);
+        if (matchND) {
+          const orderId = "ND" + matchND[1];
+          let raw = await env.LOCKET_ORDERS.get(`order_${orderId}`);
+          let order = raw ? JSON.parse(raw) : null;
+
+          if (!order) {
+            order = { orderId, type: 'deposit', username: 'khachhang', amount: body.transferAmount, status: 'pending' };
+          }
+
+          if (order.status === "pending" && body.transferAmount >= (order.amount || 10000)) {
+            order.status = "success";
+            order.paid_at = Date.now();
+            await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+
+            // Tăng số dư ví user
+            const targetUsername = order.username || 'khachhang';
+            const userKey = `user_${targetUsername.toLowerCase()}`;
+            const userRaw = await env.LOCKET_USERS.get(userKey);
+            if (userRaw) {
+              const u = JSON.parse(userRaw);
+              u.balance = (u.balance || 0) + body.transferAmount;
+              u.totalDeposit = (u.totalDeposit || 0) + body.transferAmount;
+              await env.LOCKET_USERS.put(userKey, JSON.stringify(u));
+            }
+            return json({ success: true, message: `Nạp tiền ví thành công cho @${targetUsername}` });
+          }
+        }
+
+        // XỬ LÝ ĐƠN HÀNG KÍCH HOẠT TRỰC TIẾP (Mã đơn LG...)
+        const matchLG = content.match(/LG([A-Z0-9]+)/);
+        if (!matchLG) return json({ success: false, message: "Không tìm thấy mã đơn!" });
+
+        const orderId = "LG" + matchLG[1];
+        const raw = await env.LOCKET_ORDERS.get(`order_${orderId}`);
+        if (!raw) return json({ success: false, message: "Đơn hàng không tồn tại!" });
+
+        const order = JSON.parse(raw);
+        if (order.status !== "pending") return json({ success: true, message: "Đơn đã xử lý rồi" });
+
+        // Verify amount
+        if (body.transferAmount < order.amount) {
+          order.status = "failed";
+          order.note = "Thanh toán thiếu";
+          await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+          return json({ success: false, message: "Số tiền không khớp!" });
+        }
+
+        // Mark paid
+        order.status = "paid";
+        order.paid_at = Date.now();
+        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+
+        // Trigger kick Gold (call Locket worker)
+        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
+        try {
+          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "kick", username: order.username })
+          });
+          const kickData = await kickRes.json();
+
+          order.status = kickData.success ? "success" : "kick_failed";
+          order.kick_result = kickData;
+        } catch (e) {
+          order.status = "kick_failed";
+          order.kick_error = e.message;
+        }
+
+        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+        return json({ success: true });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Login
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/admin-login") {
+        const { password } = await request.json();
+        const adminPass = env.ADMIN_PASSWORD || "DuongBinh2005@"; // Hardcoded from user or from Worker Env
+
+        if (password !== adminPass) return json({ success: false, message: "Sai mật khẩu!" });
+
+        const token = "ADM-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 8);
+        await env.LOCKET_USERS.put(`admin_token_${token}`, "1", { expirationTtl: 3600 * 8 }); // 8 hours
+
+        return json({ success: true, token });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: List all orders
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/admin-orders") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false }, 401);
+
+        // List orders from KV (prefix "order_")
+        const listResult = await env.LOCKET_ORDERS.list({ prefix: "order_", limit: 100 });
+        const orders = [];
+
+        for (const key of listResult.keys) {
+          const raw = await env.LOCKET_ORDERS.get(key.name);
+          if (raw) orders.push(JSON.parse(raw));
+        }
+
+        // Sort newest first
+        orders.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        return json({ success: true, orders });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Kick Gold
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/admin-kick") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false }, 401);
+        const { username } = await request.json();
+        if(!username) return json({ success: false, error: "Thiếu username" });
+
+        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
+        const locketRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, action: "kick", device_id: deviceId })
+        });
+        const data = await locketRes.json();
+        return json(data);
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: List all users
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/admin-users") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const listResult = await env.LOCKET_USERS.list({ prefix: "user_", limit: 1000 });
+        const users = [];
+
+        for (const key of listResult.keys) {
+          const raw = await env.LOCKET_USERS.get(key.name);
+          if (raw) {
+            try {
+              const u = JSON.parse(raw);
+              users.push({
+                username: u.username || key.name.replace("user_", ""),
+                email: u.email || "—",
+                password: u.password || "—",
+                balance: u.balance || 0,
+                createdAt: u.createdAt || Date.now()
+              });
+            } catch(e) {}
+          }
+        }
+
+        users.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        return json({ success: true, users, total: users.length });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Create User
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/admin-create-user") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const { username, password, email, balance } = await request.json();
+        if (!username || !password) return json({ success: false, message: "Thiếu username hoặc mật khẩu!" });
+
+        const userKey = `user_${username.toLowerCase()}`;
+        if (await env.LOCKET_USERS.get(userKey)) return json({ success: false, message: "Tài khoản đã tồn tại!" });
+
+        await env.LOCKET_USERS.put(userKey, JSON.stringify({
+          username, password, email: email || "",
+          balance: Number(balance) || 0,
+          createdAt: Date.now()
+        }));
+
+        return json({ success: true, message: "Tạo tài khoản người dùng thành công!" });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Set balance (Add / Deduct / Set)
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/admin-set-balance") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const { username, amount, op } = await request.json();
+        if (!username || typeof amount !== "number") return json({ success: false, message: "Thiếu username hoặc số tiền không hợp lệ!" });
+
+        const userKey = `user_${username.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(userKey);
+        if (!raw) return json({ success: false, message: "Không tìm thấy người dùng này!" });
+
+        const user = JSON.parse(raw);
+        if (op === "deduct") {
+          user.balance = Math.max(0, (user.balance || 0) - amount);
+        } else if (op === "set") {
+          user.balance = Math.max(0, amount);
+        } else {
+          // default add
+          user.balance = (user.balance || 0) + amount;
+        }
+
+        await env.LOCKET_USERS.put(userKey, JSON.stringify(user));
+        return json({ success: true, message: `Cập nhật số dư tài khoản @${username} thành ${user.balance.toLocaleString('vi-VN')}đ!`, newBalance: user.balance });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Delete User
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/admin-delete-user") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const { username } = await request.json();
+        if (!username) return json({ success: false, message: "Thiếu username người dùng!" });
+
+        const userKey = `user_${username.toLowerCase()}`;
+        await env.LOCKET_USERS.delete(userKey);
+        return json({ success: true, message: `Đã xóa người dùng @${username} khỏi hệ thống!` });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Kick Gold manual
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && (path === "/api/admin-kick-gold" || path === "/api/admin-kick")) {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const { username } = await request.json();
+        if (!username) return json({ success: false, message: "Thiếu username Locket!" });
+
+        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
+        try {
+          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, action: "kick", device_id: deviceId })
+          });
+          const kickData = await kickRes.json();
+          if (kickData.success) {
+            return json({ 
+              success: true, 
+              message: `Kích hoạt Locket Gold thành công cho @${username}!`, 
+              name: kickData.name || username,
+              username: kickData.username || username,
+              data: kickData 
+            });
+          } else {
+            return json({ 
+              success: false, 
+              message: kickData.error || kickData.message || "Locket Server từ chối kích hoạt tài khoản này!",
+              error: kickData.error || kickData.message || "Locket Server từ chối kích hoạt!"
+            });
+          }
+        } catch (e) {
+          return json({ success: false, message: "Lỗi kết nối tới Server Locket: " + e.message, error: e.message });
+        }
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: List Transactions
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/admin-transactions") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const listResult = await env.LOCKET_ORDERS.list({ prefix: "order_", limit: 500 });
+        const txs = [];
+        let totalAmt = 0;
+
+        for (const key of listResult.keys) {
+          const raw = await env.LOCKET_ORDERS.get(key.name);
+          if (raw) {
+            try {
+              const o = JSON.parse(raw);
+              txs.push(o);
+              if (o.status === "success") totalAmt += (o.amount || 0);
+            } catch(e) {}
+          }
+        }
+
+        txs.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        return json({ success: true, txs, totalCount: txs.length, totalAmount: totalAmt });
+      }
+
+      // Fallback
+      return json({ success: false, message: "Endpoint không hợp lệ." }, 404);
+
     } catch (e) {
-      return new Response(
-        JSON.stringify({ success: false, message: e.message }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ success: false, message: e.message }, 500);
     }
-  },
+  }
 };
+
+// ── Helpers ──
+
+async function getUserFromToken(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.replace("Bearer ", "").trim();
+  if (!token) return null;
+
+  const userKey = await env.LOCKET_USERS.get(`token_${token}`);
+  if (!userKey) return null;
+
+  const raw = await env.LOCKET_USERS.get(userKey);
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function verifyAdminToken(request, env) {
+  const token = request.headers.get("X-Admin-Key") || "";
+  if (!token) return false;
+  const val = await env.LOCKET_USERS.get(`admin_token_${token}`);
+  return val === "1";
+}

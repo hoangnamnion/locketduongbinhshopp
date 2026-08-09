@@ -429,16 +429,16 @@
   ]
 }
   </script>
-  <link href="/assets/css/style.css" rel="stylesheet"/>
+  <link href="assets/css/style.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
  </head>
  <body class="bg-white dark:bg-gray-900 text-text dark:text-gray-200 font-sans antialiased transition-colors duration-300">
     <!-- Nền ảnh -->
-    <div class="fixed inset-0 z-[-2] pointer-events-none bg-cover bg-center bg-no-repeat scale-105" style="background-image: url('/assets/images/background-hero.webp');"></div>
+    <div class="fixed inset-0 z-[-2] pointer-events-none bg-cover bg-center bg-no-repeat scale-105" style="background-image: url('assets/images/background-hero.webp');"></div>
     <div class="fixed inset-0 z-[-1] pointer-events-none bg-white/50 dark:bg-black/60 backdrop-blur-[3px]"></div>
 
-  <div class="fixed inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-black/70 backdrop-blur-md transition-opacity duration-500" id="global-loader" style="z-index: 10000000;">
-   <img alt="Loading..." class="w-24 h-24 md:w-44 md:h-44 object-contain mb-2 filter drop-shadow-md transition-all duration-300" src="/assets/images/loading.gif"/>
+  <div class="fixed inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-black/70 backdrop-blur-md transition-opacity duration-500" id="global-loader" style="z-index: 10000000; pointer-events: none;">
+   <img alt="Loading..." class="w-24 h-24 md:w-44 md:h-44 object-contain mb-2 filter drop-shadow-md transition-all duration-300" src="assets/images/loading.gif"/>
    <div style="display: flex; align-items: center; justify-content: center; height: 32px; margin-top: 8px;">
     <span style="display: flex; gap: 12px; align-items: flex-end; height: 32px; padding-bottom: 8px;">
      <span class="animate-wave" style="display: inline-block; width: 14px; height: 14px; background-color: #f59e0b; border-radius: 50%; -webkit-animation-delay: 0s; animation-delay: 0s;">
@@ -450,6 +450,20 @@
     </span>
    </div>
   </div>
+  <script>
+    (function(){
+      function safeDismissLoader(){
+        var l = document.getElementById('global-loader');
+        if(l){
+          l.style.opacity = '0';
+          l.style.pointerEvents = 'none';
+          setTimeout(function(){ l.style.display = 'none'; }, 200);
+        }
+      }
+      if(document.readyState === 'complete'){ safeDismissLoader(); }
+      else { window.addEventListener('load', safeDismissLoader); setTimeout(safeDismissLoader, 400); }
+    })();
+  </script>
   <div @scroll.window="scrolled = (window.pageYOffset &gt; 20) || false" class="relative z-50" x-data="{ mobileOpen: false, notifOpen: false, notifDetail: null, scrolled: false }">
    <header :class="scrolled ? 'bg-[#fffdc4]/95 dark:bg-[#09090b]/95 backdrop-blur-md shadow-sm border-b border-accent/15 dark:border-zinc-800' : 'bg-transparent border-transparent'" class="hidden lg:flex fixed top-0 left-0 right-0 h-20 z-50 items-center px-6 transition-all duration-300">
     <a class="flex items-center shrink-0" href="index.html">
@@ -1289,7 +1303,7 @@
   </div>
   <script crossorigin="anonymous" data-cf-beacon='{"version":"2024.11.0","token":"8d118c43cd924e9f9ae4756897e837c3","r":1}' integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" type="module">
   </script>
-  <script src="/assets/js/script.js">
+  <script src="assets/js/script.js">
   </script>
  <script>
   setTimeout(function() {

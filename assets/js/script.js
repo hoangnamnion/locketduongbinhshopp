@@ -9,12 +9,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             const loader = document.getElementById('global-loader');
             if (!loader) return;
-            
+            loader.classList.add('fade-out');
+            loader.style.opacity = '0';
+            loader.style.pointerEvents = 'none';
             window.setTimeout(function () {
-                loader.style.opacity = '0';
-                window.setTimeout(function () {
-                    loader.style.display = 'none';
-                }, 200);
+                loader.style.display = 'none';
             }, 200);
         });
         
@@ -22,9 +21,12 @@
         window.setTimeout(function () {
             const loader = document.getElementById('global-loader');
             if (loader) {
+                loader.classList.add('fade-out');
+                loader.style.opacity = '0';
+                loader.style.pointerEvents = 'none';
                 loader.style.display = 'none';
             }
-        }, 1000);
+        }, 500);
     
 
             // Fake Flash Sale Timer Logic
@@ -265,9 +267,85 @@
         }, 1000);
     }
 
-    function openPayment(planId, planName, price, duration, os = 'both') {
-                    window.location.href = 'login.html';
+    window.openPayment = function(planId, planName, price, duration, os) {
+        // Lấy locket username đã kiểm tra (nếu có)
+        const locketUser = window.verifiedLocketUser;
+        const username = locketUser ? (locketUser.username || '') : '';
+
+        const numPrice = parseInt(String(price).replace(/[^0-9]/g, '')) || 0;
+
+        const params = new URLSearchParams({
+            planId:   planId   || '',
+            plan:     planName || '',
+            price:    numPrice,
+            final:    numPrice,
+            duration: duration || '',
+            os:       os       || 'both',
+        });
+        if (username) params.set('username', username);
+
+        window.location.href = 'upgrade.html?' + params.toString();
+    };
+    function openPayment(planId, planName, price, duration, os) {
+        window.openPayment(planId, planName, price, duration, os);
+    }
+
+    // Modal Username Checker
+    window.checkLocketUserModal = async function() {
+        const input = document.getElementById('locketUsernameInput');
+        const btn = document.getElementById('checkLocketUserBtn');
+        const preview = document.getElementById('locketUserPreview');
+        const msg = document.getElementById('locketUserMsg');
+
+        let raw = input ? input.value.trim() : '';
+        if (!raw) {
+            if (msg) {
+                msg.textContent = '❌ Vui lòng nhập Username hoặc link Locket!';
+                msg.style.color = '#dc2626';
+                msg.classList.remove('hidden');
             }
+            return;
+        }
+
+        // Auto extract from URL
+        if (raw.includes('locket.cam/')) {
+            const m = raw.match(/locket\.cam\/(@?[a-zA-Z0-9_.-]+)/);
+            if (m && m[1]) raw = m[1].replace('@', '');
+        }
+
+        btn.disabled = true;
+        const oldText = btn.textContent;
+        btn.textContent = '⌛ ...';
+        if (preview) preview.classList.add('hidden');
+        if (msg) msg.classList.add('hidden');
+
+        try {
+            const info = await window.lookupLocketUsername(raw);
+            if (info && info.success) {
+                window.verifiedLocketUser = info;
+                document.getElementById('locketUserName').textContent = info.name || raw;
+                document.getElementById('locketUserHandle').textContent = '@' + (info.username || raw);
+                document.getElementById('locketUserAvatar').src = info.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(info.name || raw)}&background=f59e0b&color=fff&bold=true`;
+                if (preview) preview.classList.remove('hidden');
+            } else {
+                window.verifiedLocketUser = null;
+                if (msg) {
+                    msg.textContent = '❌ ' + ((info && info.error) || 'Không tìm thấy tài khoản Locket này!');
+                    msg.style.color = '#dc2626';
+                    msg.classList.remove('hidden');
+                }
+            }
+        } catch(e) {
+            window.verifiedLocketUser = null;
+            if (msg) {
+                msg.textContent = '❌ Lỗi kết nối kiểm tra tài khoản.';
+                msg.style.color = '#dc2626';
+                msg.classList.remove('hidden');
+            }
+        }
+        btn.disabled = false;
+        btn.textContent = oldText;
+    };
 
     async function applyVoucher() {
         const code = document.getElementById('voucherInput').value.trim();
@@ -313,8 +391,73 @@
         msg.classList.remove('hidden');
     }
 
-    async function goToStep2() {
+    window.goToStep2 = function() {
+        if (!currentPlanId) return;
+
+        const locketInp = document.getElementById('locketUsernameInput');
+        const msg = document.getElementById('locketUserMsg');
+        const locketUsername = locketInp ? locketInp.value.trim() : '';
+
+        if (!locketUsername) {
+            if (msg) {
+                msg.textContent = '⚠️ Vui lòng nhập Username Locket và bấm "Kiểm tra" trước khi thanh toán!';
+                msg.style.color = '#dc2626';
+                msg.classList.remove('hidden');
             }
+            if (locketInp) locketInp.focus();
+            return;
+        }
+
+        if (!window.verifiedLocketUser) {
+            if (msg) {
+                msg.textContent = '⚠️ Vui lòng bấm nút "Kiểm tra" để xác nhận tài khoản Locket hợp lệ!';
+                msg.style.color = '#d97706';
+                msg.classList.remove('hidden');
+            }
+            return;
+        }
+
+        let userCode = 'KH';
+        try {
+            const uStr = localStorage.getItem('user');
+            if (uStr) {
+                const u = JSON.parse(uStr);
+                userCode = u.username || u.name || u.email || 'KH';
+            }
+        } catch(e) {}
+
+        const randSuffix = Math.floor(1000 + Math.random() * 9000);
+        const memo = `LK ${userCode} ${randSuffix}`.toUpperCase();
+        const amount = currentFinalAmount || currentAmount;
+
+        const payBankEl = document.getElementById('payBank');
+        if (payBankEl) payBankEl.textContent = 'VietinBank (' + PAY_BANK + ')';
+
+        const payAccNoEl = document.getElementById('payAccNo');
+        if (payAccNoEl) payAccNoEl.textContent = PAY_ACC;
+
+        const payAccNameEl = document.getElementById('payAccName');
+        if (payAccNameEl) payAccNameEl.textContent = PAY_NAME;
+
+        const payAmountEl = document.getElementById('payAmount');
+        if (payAmountEl) payAmountEl.textContent = amount.toLocaleString('vi-VN') + 'đ';
+
+        const payContentEl = document.getElementById('payContent');
+        if (payContentEl) payContentEl.textContent = memo;
+
+        const qrUrl = `https://img.vietqr.io/image/${PAY_BANK}-${PAY_ACC}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(PAY_NAME)}`;
+        const qrImg = document.getElementById('payQrImg');
+        if (qrImg) qrImg.src = qrUrl;
+
+        document.getElementById('payStep1')?.classList.add('hidden');
+        document.getElementById('payStep2')?.classList.remove('hidden');
+
+        isProcessingPayment = true;
+        startQrCountdown();
+    };
+    function goToStep2() {
+        window.goToStep2();
+    }
 
     function backToStep1() {
         const action = () => {
@@ -827,25 +970,21 @@ document.addEventListener('DOMContentLoaded', () => {
 </button>
 
 <div x-show="open" @click.away="open = false" style="display: none;" class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-100 dark:border-zinc-800 py-2 z-50 flex flex-col">
-    <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-        Profile
+        Hồ sơ cá nhân
     </a>
-    <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-        Settings
+        Cài đặt tài khoản
     </a>
-    <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="activate.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-        Quản lý gói
+        Đăng ký gói VIP
     </a>
-    <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-        Lịch sử thanh toán
-    </a>
-    <a href="#" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
-        <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-        Tiếp thị liên kết
+        Lịch sử đơn hàng
     </a>
     
     <div class="h-px bg-gray-100 dark:bg-zinc-800 my-1"></div>
@@ -862,9 +1001,84 @@ document.addEventListener('DOMContentLoaded', () => {
                     parent.setAttribute('x-data', '{ open: false }');
                     parent.classList.add('relative');
                 }
-                
                 link.outerHTML = dropdownHtml;
             });
+
+            window.lgLogout = function() {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                alert('Đã đăng xuất tài khoản thành công!');
+                window.location.reload();
+            };
         } catch(e) {}
     }
 });
+
+// Scroll Reveal Observer
+document.addEventListener('DOMContentLoaded', () => {
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                entry.target.classList.add('animate-fade-in-up');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+    document.querySelectorAll('.scroll-reveal').forEach((el) => {
+        observer.observe(el);
+    });
+});
+
+// Bottom Nav Scroll Spy
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('.mobile-bottom-nav .nav-item');
+    if (!navItems.length) return;
+
+    const currentPath = window.location.pathname;
+    if (currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('SHOPLOCKETT/')) {
+        window.addEventListener('scroll', () => {
+            const pricingSection = document.getElementById('pricing');
+            if (!pricingSection) return;
+
+            let current = 'index.html';
+            const pricingTop = pricingSection.offsetTop - window.innerHeight / 2;
+            
+            if (window.scrollY >= pricingTop) {
+                current = '#pricing';
+            }
+
+            navItems.forEach(item => {
+                const href = item.getAttribute('href');
+                if (href === 'index.html' || href === '#pricing') {
+                    if (href === current) item.classList.add('active');
+                    else item.classList.remove('active');
+                }
+            });
+        });
+    }
+});
+
+// Smart Locket Username Info Lookup Helper
+window.lookupLocketUsername = async function(username) {
+    if (!username) return null;
+    const cleanName = username.trim().replace('@', '');
+    try {
+        const WORKER_URL = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev';
+        const res = await fetch(WORKER_URL + '/api/locket-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: cleanName })
+        });
+        return await res.json();
+    } catch(e) {
+        console.error('Lookup Locket Username error:', e);
+        return null;
+    }
+};
+
