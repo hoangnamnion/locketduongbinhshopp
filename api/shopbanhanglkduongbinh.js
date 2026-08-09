@@ -76,6 +76,56 @@ export default {
       }
 
       // ─────────────────────────────────────────────
+      // AUTH: UPDATE PROFILE
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/update-profile") {
+        let userObj = await getUserFromToken(request, env);
+        const { username, displayName, email } = await request.json();
+
+        const targetUsername = userObj ? userObj.username : username;
+        if (!targetUsername) return json({ success: false, message: "Không tìm thấy người dùng!" }, 401);
+
+        const key = `user_${targetUsername.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(key);
+        if (!raw) return json({ success: false, message: "Người dùng không tồn tại!" }, 404);
+
+        const currentData = JSON.parse(raw);
+        if (displayName !== undefined) currentData.displayName = displayName;
+        if (email !== undefined) currentData.email = email;
+
+        await env.LOCKET_USERS.put(key, JSON.stringify(currentData));
+        return json({ success: true, message: "Cập nhật thông tin thành công!", user: currentData });
+      }
+
+      // ─────────────────────────────────────────────
+      // AUTH: CHANGE PASSWORD
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/change-password") {
+        let userObj = await getUserFromToken(request, env);
+        const { username, currentPassword, newPassword } = await request.json();
+
+        const targetUsername = userObj ? userObj.username : username;
+        if (!targetUsername) return json({ success: false, message: "Chưa xác thực người dùng!" }, 401);
+
+        const key = `user_${targetUsername.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(key);
+        if (!raw) return json({ success: false, message: "Người dùng không tồn tại!" });
+
+        const currentData = JSON.parse(raw);
+        if (currentPassword && currentData.password && currentData.password !== currentPassword) {
+          return json({ success: false, message: "Mật khẩu hiện tại không chính xác!" });
+        }
+
+        if (!newPassword || newPassword.length < 3) {
+          return json({ success: false, message: "Mật khẩu mới quá ngắn!" });
+        }
+
+        currentData.password = newPassword;
+        await env.LOCKET_USERS.put(key, JSON.stringify(currentData));
+        return json({ success: true, message: "Đổi mật khẩu thành công!" });
+      }
+
+      // ─────────────────────────────────────────────
       // PROXY LOCKET INFO
       // ─────────────────────────────────────────────
       if (request.method === "POST" && path === "/api/locket-info") {

@@ -234,9 +234,9 @@
     });
 
     const PAY_API = 'https://locketduongbinhshop.vercel.app';
-    const PAY_BANK = 'ICB';
-    const PAY_ACC = '100864715151';
-    const PAY_NAME = 'PHAM VU LINH';
+    const PAY_BANK = 'MB';
+    const PAY_ACC = '0567355688888';
+    const PAY_NAME = 'DO DUONG BINH';
 
     function startQrCountdown() {
         let timeLeft = 300; // 5 phút
@@ -431,7 +431,7 @@
         const amount = currentFinalAmount || currentAmount;
 
         const payBankEl = document.getElementById('payBank');
-        if (payBankEl) payBankEl.textContent = 'VietinBank (' + PAY_BANK + ')';
+        if (payBankEl) payBankEl.textContent = 'MB Bank (' + PAY_BANK + ')';
 
         const payAccNoEl = document.getElementById('payAccNo');
         if (payAccNoEl) payAccNoEl.textContent = PAY_ACC;

@@ -439,7 +439,10 @@
             const data = await res.json().catch(() => null);
             if (res.ok && data?.success) {
                 if (data.token) localStorage.setItem('token', data.token);
-                if (data.user)  localStorage.setItem('user', JSON.stringify(data.user));
+                let uObj = data.user || { username: user };
+                if (typeof uObj === 'string') uObj = { username: uObj };
+                localStorage.setItem('user', JSON.stringify(uObj));
+                localStorage.setItem('user_password', pass);
                 if (document.getElementById('rememberMe').checked) {
                     localStorage.setItem('saved_user_username', user);
                     localStorage.setItem('saved_user_password', pass);

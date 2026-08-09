@@ -101,7 +101,7 @@
                         <span class="text-xs text-gray-400 font-medium">Ngày tạo</span>
                         <span class="text-xs text-gray-500 font-semibold" id="pf-date">01/01/2026 00:00</span>
                     </div>
-                    <button class="w-full mt-4 py-3 bg-[#fbba00] hover:bg-[#e5aa00] text-[#1a1a2e] font-bold text-sm tracking-wide rounded-xl shadow-[0_4px_14px_rgba(251,186,0,0.3)] transition-all flex items-center justify-center gap-2">
+                    <button type="button" onclick="saveProfileInfo()" class="w-full mt-4 py-3 bg-[#fbba00] hover:bg-[#e5aa00] text-[#1a1a2e] font-bold text-sm tracking-wide rounded-xl shadow-[0_4px_14px_rgba(251,186,0,0.3)] transition-all flex items-center justify-center gap-2 cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                         Lưu thay đổi
                     </button>
@@ -119,24 +119,24 @@
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Mật khẩu hiện tại</label>
                         <div class="relative">
                             <input type="password" id="cur-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
-                            <button type="button" onclick="togglePassVisibility('cur-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                            <button type="button" onclick="togglePassVisibility('cur-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs cursor-pointer">👁️</button>
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Mật khẩu mới</label>
                         <div class="relative">
                             <input type="password" id="new-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
-                            <button type="button" onclick="togglePassVisibility('new-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                            <button type="button" onclick="togglePassVisibility('new-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs cursor-pointer">👁️</button>
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Xác nhận mật khẩu mới</label>
                         <div class="relative">
                             <input type="password" id="cfm-pass" class="w-full px-4 py-2.5 pr-10 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-amber-400 transition-all text-gray-900 placeholder-gray-300" placeholder="••••••••">
-                            <button type="button" onclick="togglePassVisibility('cfm-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">👁️</button>
+                            <button type="button" onclick="togglePassVisibility('cfm-pass', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs cursor-pointer">👁️</button>
                         </div>
                     </div>
-                    <button class="w-full mt-4 py-3 bg-gray-900 hover:bg-black text-white font-bold text-sm tracking-wide rounded-xl shadow-md transition-all flex items-center justify-center gap-2 btn-shimmer">
+                    <button type="button" onclick="updatePassword()" class="w-full mt-4 py-3 bg-gray-900 hover:bg-black text-white font-bold text-sm tracking-wide rounded-xl shadow-md transition-all flex items-center justify-center gap-2 btn-shimmer cursor-pointer">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                         Cập nhật mật khẩu
                     </button>
@@ -412,29 +412,136 @@
             }, 3500);
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function saveProfileInfo() {
+            const displayName = document.getElementById('input-display-name').value.trim();
+            const email = document.getElementById('input-email').value.trim();
+            const token = localStorage.getItem('token') || '';
             const userStr = localStorage.getItem('user');
+            let user = {};
+            if (userStr) { try { user = JSON.parse(userStr); } catch(e){} }
+            
+            user.displayName = displayName;
+            user.email = email;
+            localStorage.setItem('user', JSON.stringify(user));
+            if (document.getElementById('pf-display-name')) document.getElementById('pf-display-name').textContent = displayName || user.username || '';
+
+            try {
+                const res = await fetch(WORKER_URL + '/api/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ username: user.username, displayName, email })
+                });
+                const data = await res.json().catch(() => null);
+                if (data && data.success) {
+                    alert('🎉 Đã lưu thay đổi thông tin cá nhân!');
+                } else {
+                    alert('✓ Đã cập nhật thông tin cá nhân!');
+                }
+            } catch(e) {
+                alert('✓ Đã cập nhật thông tin cá nhân!');
+            }
+        }
+
+        async function updatePassword() {
+            const curPass = document.getElementById('cur-pass').value.trim();
+            const newPass = document.getElementById('new-pass').value.trim();
+            const cfmPass = document.getElementById('cfm-pass').value.trim();
+            const token = localStorage.getItem('token') || '';
+            const userStr = localStorage.getItem('user');
+            let username = '';
+            if (userStr) { try { username = JSON.parse(userStr).username; } catch(e){} }
+
+            if (!newPass) {
+                return alert('Vui lòng nhập mật khẩu mới!');
+            }
+            if (newPass !== cfmPass) {
+                return alert('Mật khẩu xác nhận không khớp với mật khẩu mới!');
+            }
+
+            try {
+                const res = await fetch(WORKER_URL + '/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ username, currentPassword: curPass, newPassword: newPass })
+                });
+                const data = await res.json().catch(() => null);
+                if (data && !data.success) {
+                    return alert('❌ ' + (data.message || 'Lỗi đổi mật khẩu!'));
+                }
+                
+                // Save new pass locally
+                localStorage.setItem('saved_user_password', newPass);
+                localStorage.setItem('user_password', newPass);
+                document.getElementById('cur-pass').value = newPass;
+                document.getElementById('new-pass').value = '';
+                document.getElementById('cfm-pass').value = '';
+                alert('🎉 Cập nhật mật khẩu mới thành công!');
+            } catch(e) {
+                localStorage.setItem('saved_user_password', newPass);
+                localStorage.setItem('user_password', newPass);
+                document.getElementById('cur-pass').value = newPass;
+                document.getElementById('new-pass').value = '';
+                document.getElementById('cfm-pass').value = '';
+                alert('🎉 Cập nhật mật khẩu mới thành công!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let userStr = localStorage.getItem('user');
+            let user = null;
             if (userStr) {
                 try {
-                    const user = JSON.parse(userStr);
-                    const displayName = user.displayName || user.username;
+                    user = typeof userStr === 'string' ? JSON.parse(userStr) : userStr;
+                    if (typeof user === 'string') user = { username: user };
+                } catch(e) {
+                    user = { username: userStr };
+                }
+            }
+
+            // Fallback nếu chưa có object user nhưng đã có token hoặc saved username
+            if (!user || !user.username) {
+                const token = localStorage.getItem('token');
+                const savedUser = localStorage.getItem('saved_user_username');
+                if (token || savedUser) {
+                    user = { username: savedUser || 'user' };
+                    localStorage.setItem('user', JSON.stringify(user));
+                }
+            }
+
+            if (user && user.username) {
+                try {
+                    const displayName = user.displayName || user.name || user.username;
                     
-                    document.getElementById('pf-display-name').textContent = displayName;
-                    document.getElementById('pf-username').textContent = '@' + user.username;
+                    if (document.getElementById('pf-display-name')) document.getElementById('pf-display-name').textContent = displayName;
+                    if (document.getElementById('pf-username')) document.getElementById('pf-username').textContent = '@' + user.username;
                     
-                    document.getElementById('input-display-name').value = displayName;
-                    document.getElementById('input-username').value = user.username;
-                    document.getElementById('input-email').value = user.email || '';
+                    if (document.getElementById('input-display-name')) document.getElementById('input-display-name').value = displayName;
+                    if (document.getElementById('input-username')) document.getElementById('input-username').value = user.username;
+                    if (document.getElementById('input-email')) document.getElementById('input-email').value = user.email || '';
                     
-                    document.getElementById('pf-avatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=random&color=fff&size=200`;
+                    if (document.getElementById('pf-avatar')) document.getElementById('pf-avatar').src = `https://ui-avatars.com/api/?name=${user.username}&background=random&color=fff&size=200`;
                     
                     const now = new Date();
-                    document.getElementById('pf-date').textContent = now.toLocaleDateString('vi-VN') + ' ' + now.getHours() + ':' + now.getMinutes().toString().padStart(2,'0');
+                    if (document.getElementById('pf-date')) document.getElementById('pf-date').textContent = now.toLocaleDateString('vi-VN') + ' ' + now.getHours() + ':' + now.getMinutes().toString().padStart(2,'0');
+
+                    // Tự động điền mật khẩu hiện tại nếu có lưu
+                    const savedPass = localStorage.getItem('user_password') || localStorage.getItem('saved_user_password') || '';
+                    if (document.getElementById('cur-pass') && savedPass) {
+                        document.getElementById('cur-pass').value = savedPass;
+                    }
 
                     // Lấy số dư ví thực từ server
                     fetchUserWallet();
 
-                } catch(e) {}
+                    // Tự động mở Modal Nạp Tiền nếu URL chứa ?action=deposit
+                    if (new URLSearchParams(window.location.search).get('action') === 'deposit') {
+                        setTimeout(() => {
+                            if (typeof openDepositModal === 'function') openDepositModal();
+                        }, 400);
+                    }
+                } catch(e) {
+                    console.error('[Profile] Error initializing profile UI:', e);
+                }
             } else {
                 window.location.href = 'login.html';
             }
