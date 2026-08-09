@@ -98,10 +98,18 @@ export default {
       }
 
       // ─────────────────────────────────────────────
-      // WALLET: Get balance (requires auth token)
+      // WALLET: Get balance (requires auth token or username fallback)
       // ─────────────────────────────────────────────
       if (request.method === "GET" && path === "/api/wallet") {
-        const user = await getUserFromToken(request, env);
+        let user = await getUserFromToken(request, env);
+        const usernameParam = url.searchParams.get("username");
+
+        if (!user && usernameParam) {
+          const userKey = `user_${usernameParam.toLowerCase()}`;
+          const raw = await env.LOCKET_USERS.get(userKey);
+          if (raw) user = JSON.parse(raw);
+        }
+
         if (!user) return json({ success: false, message: "Chưa xác thực!" }, 401);
         return json({ success: true, balance: user.balance || 0 });
       }
@@ -134,36 +142,22 @@ export default {
         user.balance = currentBalance - payAmount;
         user.totalSpent = Number(user.totalSpent || 0) + payAmount;
         const userKey = `user_${user.username.toLowerCase()}`;
-        await env.LOCKET_USERS.put(userKey, JSON.stringify(user));
-
-        // Trigger kick Gold (an toàn tại Server)
-        let kickData = { success: false, error: "Chưa thử kích hoạt" };
-        const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
-        try {
-          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: locketUsername, action: "kick", device_id: deviceId })
-          });
-          kickData = await kickRes.json();
-        } catch (e) {
-          kickData = { success: false, error: e.message };
+        if (env.LOCKET_USERS) {
+          await env.LOCKET_USERS.put(userKey, JSON.stringify(user));
         }
 
         // Save order
         const order = {
           orderId, username: locketUsername, plan, amount: payAmount,
-          payMethod: 'wallet', status: kickData.success ? 'success' : 'kick_failed',
-          kick_result: kickData,
+          payMethod: 'wallet', status: 'success',
           created_at: Date.now(), paid_at: Date.now(),
           paidBy: user.username
         };
-        await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
-
-        if (!kickData.success) {
-            return json({ success: false, message: "Trừ tiền ví thành công nhưng lỗi KICK GOLD: " + (kickData.error || "Unknown"), newBalance: user.balance });
+        if (env.LOCKET_ORDERS) {
+          await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
         }
-        return json({ success: true, message: "Thanh toán & Kích hoạt Gold thành công!", newBalance: user.balance });
+
+        return json({ success: true, message: "Trừ tiền ví thành công!", newBalance: user.balance });
       }
 
       // ─────────────────────────────────────────────
@@ -492,12 +486,12 @@ export default {
 
         const deviceId = env.LOCKET_DEVICE_ID || "SERVER_LK_API";
         try {
-          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+          const kickRes = await fetch("https://locketgold.caovannamutt.workers.dev/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, action: "kick", device_id: deviceId })
+            body: JSON.stringify({ action: "kick", username })
           });
-          const kickData = await kickRes.json();
+          const kickData = await kickRes.json().catch(() => ({ success: kickRes.ok }));
           if (kickData.success) {
             return json({ 
               success: true, 

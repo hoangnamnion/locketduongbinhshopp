@@ -238,6 +238,63 @@
               </div>
             </div>
 
+            <!-- ── THANH TOÁN BẰNG VÍ ── -->
+            <div class="mb-5 rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/10 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-xl bg-amber-400 flex items-center justify-center text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-amber-800 dark:text-amber-300">Số dư ví LocketGold</div>
+                    <div class="text-base font-black text-amber-600 dark:text-amber-400" x-text="walletLoading ? '...' : fmtPrice(walletBalance)"></div>
+                  </div>
+                </div>
+                <a href="profile.html" class="text-xs font-bold text-amber-600 hover:text-amber-700 underline">Nạp thêm →</a>
+              </div>
+
+              <!-- Đủ tiền -->
+              <template x-if="walletBalance >= (plan.finalPrice || plan.price) && !walletLoading">
+                <button
+                  @click="payWithWallet()"
+                  :disabled="walletPaying || payDone"
+                  class="w-full py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-gray-900 font-black text-sm rounded-xl border-0 cursor-pointer transition-all flex items-center justify-center gap-2 shadow-md shadow-amber-300/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <template x-if="!walletPaying">
+                    <span class="flex items-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      Thanh toán bằng số dư ví (<span x-text="fmtPrice(plan.finalPrice || plan.price)"></span>)
+                    </span>
+                  </template>
+                  <template x-if="walletPaying">
+                    <span class="flex items-center gap-2">
+                      <svg class="spin w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round"/></svg>
+                      Đang xử lý...
+                    </span>
+                  </template>
+                </button>
+              </template>
+
+              <!-- Thiếu tiền -->
+              <template x-if="walletBalance < (plan.finalPrice || plan.price) && !walletLoading">
+                <div class="text-center">
+                  <p class="text-xs text-amber-700 dark:text-amber-400 mb-2">
+                    Số dư ví chưa đủ (cần thêm <span class="font-black" x-text="fmtPrice((plan.finalPrice || plan.price) - walletBalance)"></span>)
+                  </p>
+                  <a href="profile.html" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-amber-300 text-amber-700 font-bold text-xs rounded-xl hover:bg-amber-50 transition-all">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                    Nạp tiền vào ví
+                  </a>
+                </div>
+              </template>
+
+              <div class="flex items-center gap-2 mt-3">
+                <div class="flex-1 h-px bg-amber-200 dark:bg-amber-800"></div>
+                <span class="text-xs text-amber-500 font-bold">hoặc thanh toán bằng QR bên dưới</span>
+                <div class="flex-1 h-px bg-amber-200 dark:bg-amber-800"></div>
+              </div>
+            </div>
+
             <!-- QR -->
             <div class="text-center mb-5">
               <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3">Quét mã QR để thanh toán</p>
@@ -343,7 +400,7 @@
             <a href="index.html" class="py-3.5 bg-gradient-to-r from-amber-400 to-amber-500 text-gray-900 font-black text-sm rounded-2xl text-center no-underline hover:-translate-y-0.5 transition-all block shadow-lg shadow-amber-400/20">
               ← Về Trang Chủ
             </a>
-            <a href="https://zalo.me/0941205106" target="_blank" rel="noopener" class="py-3.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-2xl text-center no-underline hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all block">
+            <a href="https://zalo.me/0378787154" target="_blank" rel="noopener" class="py-3.5 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 font-bold text-sm rounded-2xl text-center no-underline hover:bg-gray-200 dark:hover:bg-zinc-700 transition-all block">
               💬 Liên Hệ Zalo Hỗ Trợ
             </a>
           </div>
@@ -359,9 +416,9 @@
 <script>
 const API      = 'https://locketgold.caovannamutt.workers.dev/';
 const PAY_API  = 'https://locketduongbinhshop.vercel.app';
-const PAY_BANK = 'ICB';            // VietinBank
-const PAY_ACC  = '100864715151';
-const PAY_NAME = 'PHAM VU LINH';
+const PAY_BANK = 'MB';            
+const PAY_ACC  = '0567355688888';
+const PAY_NAME = 'DO DUONG BINH';
 
 function upgradePage() {
   return {
@@ -377,6 +434,10 @@ function upgradePage() {
     payDone: false,
     _pollTimer: null,
     _countTimer: null,
+    // Ví tiền
+    walletBalance: 0,
+    walletLoading: false,
+    walletPaying: false,
 
     init() {
       // Đọc plan từ URL params
@@ -391,6 +452,47 @@ function upgradePage() {
       // Pre-fill username nếu có
       this.username = p.get('username') || '';
       if (this.username) this.lookup();
+      // Load số dư ví
+      this.loadWalletBalance();
+    },
+
+    async loadWalletBalance() {
+      let username = '';
+      // Đọc từ localStorage trước
+      try {
+        const uStr = localStorage.getItem('user');
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          username = u.username || '';
+          if (u.balance != null) this.walletBalance = Number(u.balance) || 0;
+        }
+      } catch(e) {}
+
+      const token = localStorage.getItem('token') || '';
+      try {
+        this.walletLoading = true;
+        let apiUrl = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev/api/wallet';
+        if (username) apiUrl += '?username=' + encodeURIComponent(username);
+
+        const headers = {};
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const res = await fetch(apiUrl, { headers });
+        const data = await res.json();
+        if (data.success) {
+          this.walletBalance = Number(data.balance) || 0;
+          // Cập nhật lại localStorage
+          try {
+            const uStr = localStorage.getItem('user');
+            if (uStr) {
+              const u = JSON.parse(uStr);
+              u.balance = this.walletBalance;
+              localStorage.setItem('user', JSON.stringify(u));
+            }
+          } catch(e) {}
+        }
+      } catch(e) {}
+      finally { this.walletLoading = false; }
     },
 
     setStatus(type, text) { this.status = { type, text }; },
@@ -447,7 +549,7 @@ function upgradePage() {
       const memo    = `LK KH ${suffix}`.toUpperCase();
 
       this.payment = {
-        bank:    'VietinBank (ICB)',
+        bank:    'MB Bank (MB)',
         accNo:   PAY_ACC,
         accName: PAY_NAME,
         amount:  amount,
@@ -509,6 +611,83 @@ function upgradePage() {
         }
       } catch (e) {
         this.setStatus('err', '❌ Lỗi kết nối: ' + e.message);
+      }
+    },
+
+    async payWithWallet() {
+      if (this.walletPaying) return;
+      const amount = this.plan.finalPrice || this.plan.price;
+      if (this.walletBalance < amount) {
+        this.setStatus('err', '❌ Số dư ví không đủ. Vui lòng nạp thêm tiền vào ví.');
+        return;
+      }
+      if (!this.user || !this.user.username) {
+        this.setStatus('err', '❌ Vui lòng chọn và xác minh tài khoản Locket trước.');
+        return;
+      }
+
+      let loggedUser = '';
+      try {
+        const uStr = localStorage.getItem('user');
+        if (uStr) {
+          const u = JSON.parse(uStr);
+          loggedUser = u.username || '';
+        }
+      } catch(e) {}
+
+      const token = localStorage.getItem('token') || '';
+      const orderId = "LG" + Date.now().toString(36).toUpperCase().slice(-6);
+
+      this.walletPaying = true;
+      this.clearStatus();
+      this.setStatus('wait', '⏳ Đang trừ tiền ví & kích hoạt Locket Gold...');
+
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const res = await fetch('https://shopbanhanglkduongbinh.caovannamutt.workers.dev/api/pay-wallet', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            orderId: orderId,
+            amount: amount,
+            username: this.user.username,
+            plan: this.plan.name,
+            user: loggedUser
+          })
+        });
+
+        const data = await res.json().catch(() => ({ success: false, message: 'Lỗi phản hồi từ máy chủ' }));
+
+        const isDeducted = data.success || (data.message && data.message.includes("Trừ tiền ví thành công"));
+
+        if (isDeducted) {
+          // Cập nhật số dư ví mới từ server (Đồng bộ số tiền!)
+          const newBal = Number(data.newBalance ?? (this.walletBalance - amount)) || 0;
+          this.walletBalance = newBal;
+          try {
+            const uStr = localStorage.getItem('user');
+            if (uStr) {
+              const u = JSON.parse(uStr);
+              u.balance = newBal;
+              localStorage.setItem('user', JSON.stringify(u));
+            }
+          } catch(e) {}
+
+          this.payDone = true;
+          if (this._pollTimer) clearInterval(this._pollTimer);
+          if (this._countTimer) clearInterval(this._countTimer);
+
+          // Gọi trực tiếp https://locketgold.caovannamutt.workers.dev/ (như locket.html) từ trình duyệt
+          await this.doUpgrade();
+        } else {
+          this.setStatus('err', '❌ ' + (data.message || data.error || 'Trừ tiền ví thất bại. Liên hệ hỗ trợ.'));
+        }
+      } catch (e) {
+        this.setStatus('err', '❌ Lỗi kết nối ví: ' + e.message);
+      } finally {
+        this.walletPaying = false;
       }
     },
 

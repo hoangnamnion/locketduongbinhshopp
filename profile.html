@@ -219,7 +219,7 @@
                     </div>
                     <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
                         <span class="text-gray-500">Chủ tài khoản:</span>
-                        <span class="font-bold text-gray-900 dark:text-white">DO BINH DUONG</span>
+                        <span class="font-bold text-gray-900 dark:text-white">DO DUONG BINH</span>
                     </div>
                     <div class="flex justify-between items-center py-1.5 border-b border-gray-100 dark:border-zinc-800">
                         <span class="text-gray-500">Số tiền:</span>
@@ -245,39 +245,84 @@
     <!-- Alpine JS & Script -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="/assets/js/script.js"></script>
-
     <script>
         const WORKER_URL = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev';
         const SEPAY_CONFIG = {
             bankCode: 'MB',
             accountNumber: '0567355688888',
-            accountName: 'DO BINH DUONG',
+            accountName: 'DO DUONG BINH',
         };
 
         let depPollInterval = null;
         let activeDepOrderId = null;
 
         async function fetchUserWallet() {
-            const token = localStorage.getItem('token');
-            if (!token) return;
+            let currentUsername = '';
+            // ── 1. Hiển thị ngay từ localStorage trước (không cần chờ API) ──
             try {
-                const res = await fetch(WORKER_URL + '/api/wallet', {
-                    headers: { 'Authorization': 'Bearer ' + token }
-                });
-                const data = await res.json();
-                if (data.success) {
-                    const bal = data.balance || 0;
-                    document.getElementById('pf-balance').textContent = bal.toLocaleString('vi-VN') + 'đ';
-                    const userStr = localStorage.getItem('user');
-                    if (userStr) {
-                        try {
-                            const u = JSON.parse(userStr);
-                            u.balance = bal;
-                            localStorage.setItem('user', JSON.stringify(u));
-                        } catch(e){}
+                const uStr = localStorage.getItem('user');
+                if (uStr) {
+                    const u = JSON.parse(uStr);
+                    currentUsername = u.username || '';
+                    if (u.balance != null) {
+                        const cachedBal = Number(u.balance) || 0;
+                        document.getElementById('pf-balance').textContent = cachedBal.toLocaleString('vi-VN') + 'đ';
+                        console.log('[Wallet] Số dư cache từ localStorage:', cachedBal);
                     }
                 }
-            } catch(e){}
+            } catch(e) {}
+
+            // ── 2. Lấy token ──
+            let token = localStorage.getItem('token') || '';
+
+            // ── 3. Gọi API wallet (kèm username fallback) ──
+            try {
+                console.log('[Wallet] Đang gọi API wallet...');
+                let apiUrl = WORKER_URL + '/api/wallet';
+                if (currentUsername) {
+                    apiUrl += '?username=' + encodeURIComponent(currentUsername);
+                }
+
+                const headers = {};
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+
+                const res = await fetch(apiUrl, { headers });
+
+                // Nếu 401 & có username fallback thì thử fetch lại không token (dùng username)
+                if (res.status === 401) {
+                    console.warn('[Wallet] Token hết hạn/lỗi (401), đang dùng username fallback...');
+                    if (currentUsername) {
+                        const res2 = await fetch(WORKER_URL + '/api/wallet?username=' + encodeURIComponent(currentUsername));
+                        const data2 = await res2.json();
+                        if (data2.success) {
+                            applyBalance(data2.balance || 0);
+                            return;
+                        }
+                    }
+                    // Thử re-login tự động nếu có saved credentials
+                    const newToken = await tryAutoReLogin();
+                    if (newToken) {
+                        const res3 = await fetch(WORKER_URL + '/api/wallet', {
+                            headers: { 'Authorization': 'Bearer ' + newToken }
+                        });
+                        const data3 = await res3.json();
+                        if (data3.success) {
+                            applyBalance(data3.balance || 0);
+                        }
+                    }
+                    return;
+                }
+
+                const data = await res.json();
+                console.log('[Wallet] Phản hồi từ server:', data, '| HTTP:', res.status);
+                if (data.success) {
+                    applyBalance(data.balance || 0);
+                } else {
+                    console.error('[Wallet] Server trả về lỗi:', data.message);
+                }
+            } catch(e) {
+                console.error('[Wallet] Lỗi kết nối:', e);
+            }
         }
 
         function openDepositModal() {
