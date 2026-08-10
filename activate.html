@@ -100,16 +100,126 @@
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer=""></script>
 </head>
 <body class="bg-white dark:bg-gray-900 text-text dark:text-gray-200 font-sans antialiased transition-colors duration-300">
+  <style>
+    /* Styling for the toast notification that appears when not logged in */
+    .locket-toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 10000001;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        max-width: 90%;
+        width: 320px;
+    }
+    html.dark .locket-toast {
+        background: rgba(24, 24, 27, 0.95);
+        border-color: rgba(245, 158, 11, 0.25);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    .locket-toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+    .locket-toast-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(245, 158, 11, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f59e0b;
+        font-size: 18px;
+    }
+    .locket-toast-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        color: #1a1a1a;
+        line-height: 1.4;
+    }
+    html.dark .locket-toast-text { color: #f4f4f5; }
+    
+    /* Overlay khi chặn UI (chưa đăng nhập) */
+    .locket-toast-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 10000000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        visibility: hidden;
+    }
+    html.dark .locket-toast-overlay {
+        background: rgba(0, 0, 0, 0.8);
+    }
+    .locket-toast-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+  </style>
+
+  <!-- HTML cho Overlay \u0026 Toast -->
+  <div class="locket-toast-overlay" id="authGuardOverlay"></div>
+  <div class="locket-toast" id="authGuardToast">
+    <div class="locket-toast-icon">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div class="locket-toast-text">
+      Bạn cần đăng nhập trước để sử dụng tính năng này!
+    </div>
+  </div>
+
   <script>
     // Auth Guard — yêu cầu đăng nhập để vào trang kích hoạt
     (function() {
       try {
         var user = localStorage.getItem('user');
         if (!user) {
-          window.location.replace('login.html?redirect=activate.html');
+          triggerLoginRedirect();
         }
       } catch(e) {
-        window.location.replace('login.html?redirect=activate.html');
+        triggerLoginRedirect();
+      }
+
+      function triggerLoginRedirect() {
+        // Chặn luồng hiển thị HTML phía dưới
+        document.addEventListener("DOMContentLoaded", function() {
+            var overlay = document.getElementById('authGuardOverlay');
+            var toast = document.getElementById('authGuardToast');
+            if (overlay && toast) {
+                overlay.classList.add('active');
+                
+                // Tránh lỗi scroll
+                document.body.style.overflow = 'hidden'; 
+                
+                // Hiện toast
+                setTimeout(function() {
+                    toast.classList.add('show');
+                }, 100);
+
+                // Sau 2 giây thì redirect
+                setTimeout(function() {
+                    window.location.replace('login.html?redirect=activate.html');
+                }, 2000);
+            } else {
+                window.location.replace('login.html?redirect=activate.html');
+            }
+        });
       }
     })();
   </script>

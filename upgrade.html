@@ -156,6 +156,134 @@
   </style>
 </head>
 <body class="bg-[#FFFCEB] dark:bg-zinc-950 text-gray-900 dark:text-gray-100 font-sans antialiased transition-colors duration-300 min-h-screen flex flex-col justify-between relative overflow-x-hidden" x-data="upgradePage()" x-init="init()">
+  <style>
+    /* Styling for the toast notification that appears when not logged in */
+    .locket-toast {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 10000001;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        max-width: 90%;
+        width: 320px;
+    }
+    html.dark .locket-toast {
+        background: rgba(24, 24, 27, 0.95);
+        border-color: rgba(245, 158, 11, 0.25);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+    .locket-toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+    .locket-toast-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(245, 158, 11, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f59e0b;
+        font-size: 18px;
+    }
+    .locket-toast-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        color: #1a1a1a;
+        line-height: 1.4;
+    }
+    html.dark .locket-toast-text { color: #f4f4f5; }
+    
+    /* Overlay khi chặn UI (chưa đăng nhập) */
+    .locket-toast-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 10000000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        visibility: hidden;
+    }
+    html.dark .locket-toast-overlay {
+        background: rgba(0, 0, 0, 0.8);
+    }
+    .locket-toast-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+  </style>
+
+  <!-- HTML cho Overlay & Toast -->
+  <div class="locket-toast-overlay" id="authGuardOverlay"></div>
+  <div class="locket-toast" id="authGuardToast">
+    <div class="locket-toast-icon">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <div class="locket-toast-text">
+      Bạn cần đăng nhập trước để tiến hành nâng cấp Locket!
+    </div>
+  </div>
+
+  <script>
+    // Auth Guard — yêu cầu đăng nhập để vào trang
+    (function() {
+      try {
+        var user = localStorage.getItem('user');
+        if (!user) {
+          triggerLoginRedirect();
+        }
+      } catch(e) {
+        triggerLoginRedirect();
+      }
+
+      function triggerLoginRedirect() {
+        // Chặn luồng hiển thị HTML phía dưới
+        document.addEventListener("DOMContentLoaded", function() {
+            var overlay = document.getElementById('authGuardOverlay');
+            var toast = document.getElementById('authGuardToast');
+            if (overlay && toast) {
+                overlay.classList.add('active');
+                
+                // Tránh lỗi scroll
+                document.body.style.overflow = 'hidden'; 
+                
+                // Hiện toast
+                setTimeout(function() {
+                    toast.classList.add('show');
+                }, 100);
+
+                // Lấy params hiện tại (như ?plan=abc&price=123...) để lưu lại trước khi văng sang form login
+                var currentQuery = location.search.substring(1);
+                var fallbackUrl = 'upgrade.html';
+                if(currentQuery) fallbackUrl += '%3F' + encodeURIComponent(currentQuery);
+
+                // Sau 2 giây thì redirect
+                setTimeout(function() {
+                    window.location.replace('login.html?redirect=' + fallbackUrl);
+                }, 2000);
+            } else {
+                window.location.replace('login.html?redirect=upgrade.html');
+            }
+        });
+      }
+    })();
+  </script>
 
   <!-- Ambient light blobs -->
   <div class="fixed top-10 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-300/30 dark:bg-amber-500/10 rounded-full blur-[100px] pointer-events-none z-[-2]"></div>
