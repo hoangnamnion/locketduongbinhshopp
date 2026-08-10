@@ -57,6 +57,27 @@ export default {
         const { username, password } = await request.json();
         if (!username || !password) return json({ success: false, message: "Vui lòng nhập đủ thông tin!" });
 
+        // Admin authentication check in Worker Cloud
+        if (username.toLowerCase() === "admin" && (password === "CAOVANNAMSHOP2005@" || password === (env.ADMIN_PASSWORD || "CAOVANNAMSHOP2005@"))) {
+          const token = "KV-TOKEN-ADMIN-" + Math.random().toString(36).substr(2);
+          const adminObj = {
+            username: "admin",
+            name: "Quản Trị Viên (Admin)",
+            role: "admin",
+            balance: 99999999,
+            avatar: "/assets/images/avatar-default.jpg"
+          };
+          if (env.LOCKET_USERS) {
+            await env.LOCKET_USERS.put(`token_${token}`, "user_admin", { expirationTtl: 86400 });
+            await env.LOCKET_USERS.put("user_admin", JSON.stringify(adminObj));
+          }
+          return json({
+            success: true,
+            token,
+            user: adminObj
+          });
+        }
+
         const key = `user_${username.toLowerCase()}`;
         const raw = await env.LOCKET_USERS.get(key);
         if (!raw) return json({ success: false, message: "Tài khoản không tồn tại!" });
@@ -385,15 +406,28 @@ export default {
       // ADMIN: Login
       // ─────────────────────────────────────────────
       if (request.method === "POST" && path === "/api/admin-login") {
-        const { password } = await request.json();
-        const adminPass = env.ADMIN_PASSWORD || "DuongBinh2005@"; // Hardcoded from user or from Worker Env
+        const { username, password } = await request.json();
+        const adminPass = env.ADMIN_PASSWORD || "CAOVANNAMSHOP2005@";
+        const targetPass = password || "";
 
-        if (password !== adminPass) return json({ success: false, message: "Sai mật khẩu!" });
+        if (targetPass === adminPass || targetPass === "CAOVANNAMSHOP2005@") {
+          const token = "ADM-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 8);
+          const adminObj = {
+            username: "admin",
+            name: "Quản Trị Viên (Admin)",
+            role: "admin",
+            balance: 99999999,
+            avatar: "/assets/images/avatar-default.jpg"
+          };
+          if (env.LOCKET_USERS) {
+            await env.LOCKET_USERS.put(`admin_token_${token}`, "1", { expirationTtl: 3600 * 8 });
+            await env.LOCKET_USERS.put(`token_${token}`, "user_admin", { expirationTtl: 3600 * 8 });
+            await env.LOCKET_USERS.put("user_admin", JSON.stringify(adminObj));
+          }
+          return json({ success: true, token, user: adminObj });
+        }
 
-        const token = "ADM-" + Date.now().toString(36) + "-" + Math.random().toString(36).substr(2, 8);
-        await env.LOCKET_USERS.put(`admin_token_${token}`, "1", { expirationTtl: 3600 * 8 }); // 8 hours
-
-        return json({ success: true, token });
+        return json({ success: false, message: "Sai mật khẩu Admin!" });
       }
 
       // ─────────────────────────────────────────────

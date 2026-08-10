@@ -453,9 +453,29 @@
                 btn.innerHTML = '✓ Thành công!';
                 btn.style.background = '#22c55e';
                 btn.style.boxShadow = '0 6px 20px rgba(34,197,94,0.4)';
-                setTimeout(() => { window.location.href = 'index.html'; }, 900);
+                const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+                let targetPage;
+                if (uObj.username === 'admin' || uObj.role === 'admin') {
+                    targetPage = 'livestream.html';
+                } else if (redirectParam) {
+                    targetPage = redirectParam;
+                } else {
+                    targetPage = 'index.html';
+                }
+                setTimeout(() => { window.location.href = targetPage; }, 900);
             } else {
-                showMsg('loginError', (data?.message) || 'Tài khoản hoặc mật khẩu không chính xác');
+                // Check fallback for admin login via API endpoint /api/admin-login
+                const adminRes = await fetch(WORKER_URL + '/api/admin-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:user, password:pass}) }).catch(() => null);
+                const adminData = await adminRes?.json().catch(() => null);
+                if (adminRes?.ok && adminData?.success) {
+                    const adminObj = adminData.user || { username: 'admin', name: 'Quản Trị Viên (Admin)', role: 'admin' };
+                    localStorage.setItem('user', JSON.stringify(adminObj));
+                    btn.innerHTML = '✓ Thành công Admin!';
+                    btn.style.background = '#22c55e';
+                    setTimeout(() => { window.location.href = 'livestream.html'; }, 900);
+                    return;
+                }
+                showMsg('loginError', (data?.message || adminData?.message) || 'Tài khoản hoặc mật khẩu không chính xác');
                 btn.disabled = false; btn.innerHTML = old;
             }
         } catch {
