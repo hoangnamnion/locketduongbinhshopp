@@ -786,6 +786,7 @@
       const res = await fetch(WORKER_URL + '/api/admin-orders', {
         headers: { 'X-Admin-Key': adminToken }
       });
+      if (res.status === 401) { showToast('Phiên đăng nhập hết hạn!', 'error'); doLogout(); return; }
       const data = await res.json();
       const orders = data.orders || [];
       cachedOrders = orders;
@@ -927,16 +928,19 @@
       const res = await fetch(WORKER_URL + '/api/admin-users', {
         headers: { 'X-Admin-Key': adminToken }
       });
+      if (res.status === 401) { showToast('Phiên đăng nhập hết hạn!', 'error'); doLogout(); return; }
       const data = await res.json();
       if (data.success) {
         cachedUsers = data.users || [];
         if (document.getElementById('stat-users')) document.getElementById('stat-users').textContent = data.total || cachedUsers.length;
         if (document.getElementById('users-total-count')) document.getElementById('users-total-count').textContent = data.total || cachedUsers.length;
         filterAdminUsers();
+      } else {
+        throw new Error(data.error || data.message || 'Lỗi không xác định từ máy chủ');
       }
     } catch(e) {
       if (document.getElementById('users-tbody')) {
-        document.getElementById('users-tbody').innerHTML = `<tr><td colspan="6" class="empty-state">Lỗi tải dữ liệu: ${e.message}</td></tr>`;
+        document.getElementById('users-tbody').innerHTML = `<tr><td colspan="8" class="empty-state">Lỗi tải dữ liệu: ${e.message}</td></tr>`;
       }
     }
   }
@@ -1190,12 +1194,15 @@
       const res = await fetch(WORKER_URL + '/api/admin-transactions', {
         headers: { 'X-Admin-Key': adminToken }
       });
+      if (res.status === 401) { showToast('Phiên đăng nhập hết hạn!', 'error'); doLogout(); return; }
       const data = await res.json();
       if (data.success) {
         cachedTx = data.txs || [];
         if (document.getElementById('stat-tx-count')) document.getElementById('stat-tx-count').textContent = data.totalCount || cachedTx.length;
         if (document.getElementById('stat-tx-total')) document.getElementById('stat-tx-total').textContent = (data.totalAmount || 0).toLocaleString('vi-VN') + 'đ';
         filterAdminTx();
+      } else {
+        throw new Error(data.error || data.message || 'Lỗi không xác định từ máy chủ');
       }
     } catch(e) {
       if (document.getElementById('tx-tbody')) {
