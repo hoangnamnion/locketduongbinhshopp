@@ -206,7 +206,7 @@
             <div class="mt-4 pt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-around text-xs">
               <div>
                 <span class="block text-gray-400 font-medium">Hôm nay</span>
-                <span class="font-black text-emerald-600 dark:text-emerald-400 text-sm">342+ Đơn</span>
+                <span class="font-black text-emerald-600 dark:text-emerald-400 text-sm font-mono" x-text="ordersCount + '+ Đơn'"></span>
               </div>
               <div class="w-px h-6 bg-gray-200 dark:bg-zinc-800"></div>
               <div>
@@ -428,11 +428,14 @@
 
   <script>
     const API = 'https://twilight-mountain-96b6.caovannamutt.workers.dev/';
+    const WORKER_STATS = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev/api/stats';
+    const WORKER_INC = 'https://shopbanhanglkduongbinh.caovannamutt.workers.dev/api/increment-stats';
 
     function livestreamPage() {
       return {
         isAdmin: false,
         viewers: 1542,
+        ordersCount: 342,
         step: 1,
         username: '',
         looking: false,
@@ -452,10 +455,24 @@
             } catch (e) { this.isAdmin = false; }
           }
 
+          // Fetch real-time Cloud Worker order stats
+          this.fetchLiveStats();
+          setInterval(() => this.fetchLiveStats(), 10000);
+
           // Random viewer fluctuations
           setInterval(() => {
             if (this.isAdmin) this.viewers += Math.floor(Math.random() * 9) - 4;
           }, 3000);
+        },
+
+        async fetchLiveStats() {
+          try {
+            const res = await fetch(WORKER_STATS);
+            const data = await res.json();
+            if (data && data.totalOrders) {
+              this.ordersCount = data.totalOrders;
+            }
+          } catch(e) {}
         },
 
         logout() {
@@ -507,6 +524,8 @@
 
             if (data.success || res.ok) {
               this.step = 2;
+              // Increment real-time order counter on Cloud Worker!
+              fetch(WORKER_INC, { method: 'POST' }).then(() => this.fetchLiveStats()).catch(() => {});
             } else {
               this.setStatus('err', '❌ Kích hoạt thất bại: ' + (data.error || data.message || 'Lỗi server.'));
             }

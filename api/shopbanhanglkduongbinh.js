@@ -537,10 +537,60 @@ export default {
           }
 
           await sendTelegramMessage(env, text);
+          
+          // Auto-increment Cloud Worker stats counter on warranty claim or download
+          if (env.LOCKET_USERS && (eventType === "warranty_claim" || eventType === "dns_download")) {
+            try {
+              const currentVal = await env.LOCKET_USERS.get("stat_orders");
+              const currentNum = parseInt(currentVal || "342") || 342;
+              await env.LOCKET_USERS.put("stat_orders", String(currentNum + 1));
+            } catch(e) {}
+          }
+
           return json({ success: true, message: "Đã gửi thông báo Telegram!" });
         } catch(e) {
           return json({ success: false, message: e.message }, 500);
         }
+      }
+
+      // ─────────────────────────────────────────────
+      // REALTIME STATS: Lấy số đơn hàng thực tế
+      // ─────────────────────────────────────────────
+      if (path === "/api/stats") {
+        let totalOrders = 342;
+        if (env.LOCKET_USERS) {
+          const val = await env.LOCKET_USERS.get("stat_orders");
+          if (val) {
+            totalOrders = parseInt(val) || 342;
+          } else {
+            await env.LOCKET_USERS.put("stat_orders", "342");
+          }
+        }
+        return json({
+          success: true,
+          totalOrders: totalOrders,
+          todayOrders: totalOrders,
+          status: "Online",
+          speed: "0.5s"
+        });
+      }
+
+      // ─────────────────────────────────────────────
+      // REALTIME STATS: Tăng số lượng đơn thực tế
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/increment-stats") {
+        let totalOrders = 343;
+        if (env.LOCKET_USERS) {
+          const val = await env.LOCKET_USERS.get("stat_orders");
+          const currentNum = parseInt(val || "342") || 342;
+          totalOrders = currentNum + 1;
+          await env.LOCKET_USERS.put("stat_orders", String(totalOrders));
+        }
+        return json({
+          success: true,
+          totalOrders: totalOrders,
+          todayOrders: totalOrders
+        });
       }
 
 
