@@ -555,6 +555,139 @@ export default {
       }
 
       // ─────────────────────────────────────────────
+      // TẢI FILE CẤU HÌNH VIP (.mobileconfig)
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && (path === "/api/download2" || path === "/api/download")) {
+        const urlObj = new URL(request.url);
+        const data = urlObj.searchParams.get("data");
+
+        if (!data) return new Response("Thiếu dữ liệu", { status: 400 });
+
+        let decoded;
+        try {
+          const raw = atob(decodeURIComponent(data));
+          decoded = JSON.parse(raw);
+        } catch (e) {
+          try {
+            decoded = JSON.parse(atob(data));
+          } catch(err) {
+            return new Response("Dữ liệu không hợp lệ", { status: 400 });
+          }
+        }
+
+        if (decoded.exp && Date.now() > decoded.exp) {
+          return new Response("Liên kết đã hết hạn (60 phút)", { status: 410 });
+        }
+
+        const rawName = String(decoded.name || "Khách VIP").trim() || "Khách VIP";
+        const displayName = escapeXml(rawName);
+        const safeSlug = makeAsciiSlug(rawName);
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>DNSSettings</key>
+            <dict>
+                <key>DNSProtocol</key>
+                <string>HTTPS</string>
+                <key>ServerAddresses</key>
+                <array>
+                    <string>1.1.1.1</string>
+                    <string>1.0.0.1</string>
+                    <string>45.90.28.0</string>
+                    <string>45.90.30.0</string>
+                    <string>2a07:a8c0::</string>
+                    <string>2a07:a8c1::</string>
+                </array>
+                <key>ServerURL</key>
+                <string>https://dns.adguard.com/dns-query</string>
+                <key>SupplementalMatchDomains</key>
+                <array>
+                    <string>certs.apple.com</string>
+                    <string>crl.apple.com</string>
+                    <string>ocsp.apple.com</string>
+                    <string>ocsp2.apple.com</string>
+                    <string>valid.apple.com</string>
+                    <string>crl3.digicert.com</string>
+                    <string>crl4.digicert.com</string>
+                    <string>ocsp.digicert.cn</string>
+                    <string>ocsp.digicert.com</string>
+                    <string>api.revenuecat.com</string>
+                    <string>app.revenuecat.com</string>
+                    <string>in.appcenter.ms</string>
+                    <string>app-measurement.com</string>
+                    <string>firebaselogging-pa.googleapis.com</string>
+                    <string>mixpanel.com</string>
+                    <string>api.mixpanel.com</string>
+                </array>
+            </dict>
+            <key>OnDemandRules</key>
+            <array>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>WiFi</string>
+                </dict>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>Cellular</string>
+                </dict>
+            </array>
+            <key>PayloadDescription</key>
+            <string>Configures device to use Locket VIP Freeze DNS</string>
+            <key>PayloadDisplayName</key>
+            <string>Locket VIP - ${displayName}</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.dnsSettings.managed.locketvip.${safeSlug}</string>
+            <key>PayloadType</key>
+            <string>com.apple.dnsSettings.managed</string>
+            <key>PayloadUUID</key>
+            <string>C3D4E5F6-7890-1234-5678-90ABCDEF1234</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDescription</key>
+    <string>Chức Năng:
+✔️ Hỗ Trợ Không Bị Mất Locket Gold
+_Dương Bình Đẹp Zai_ </string>
+    <key>PayloadDisplayName</key>
+    <string>💛 Locket Gold VIP (Vĩnh Viễn) - ${displayName}</string>
+    <key>PayloadIdentifier</key>
+    <string>com.p12.locket.vip</string>
+    <key>PayloadOrganization</key>
+    <string>By Duong Binh Vip</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>21098765-4321-DCBA-0F12-4567890ABCDE</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>`;
+
+        const fileName = `${rawName}_DNS_Locket_Gold.mobileconfig`;
+        return new Response(xml, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/x-apple-aspen-config; charset=utf-8",
+            "Content-Disposition": makeContentDisposition(fileName),
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            ...corsHeaders(request)
+          }
+        });
+      }
+
+      // ─────────────────────────────────────────────
       // ADMIN: Login
       // ─────────────────────────────────────────────
       if (request.method === "POST" && path === "/api/admin-login") {
