@@ -215,6 +215,15 @@ export default {
         const userKey = `user_${user.username.toLowerCase()}`;
         if (env.LOCKET_USERS) {
           await env.LOCKET_USERS.put(userKey, JSON.stringify(user));
+          await recordUserTransaction(env, user.username, {
+            id: orderId,
+            type: 'spend',
+            title: `Mua gói ${plan || 'Locket Gold'}` + (locketUsername ? ` cho @${locketUsername}` : ''),
+            targetUser: locketUsername || '',
+            amount: payAmount,
+            status: 'success',
+            time: Date.now()
+          });
         }
 
         // Save order
@@ -353,6 +362,14 @@ export default {
               u.totalDeposit = (u.totalDeposit || 0) + body.transferAmount;
               await env.LOCKET_USERS.put(userKey, JSON.stringify(u));
             }
+            await recordUserTransaction(env, targetUsername, {
+              id: orderId,
+              type: 'deposit',
+              title: 'Nạp tiền ví qua SePay QR',
+              amount: body.transferAmount,
+              status: 'success',
+              time: Date.now()
+            });
             return json({ success: true, message: `Nạp tiền ví thành công cho @${targetUsername}` });
           }
         }
@@ -399,7 +416,142 @@ export default {
         }
 
         await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+        
+        await recordUserTransaction(env, order.paidBy || order.username || 'khachhang', {
+          id: orderId,
+          type: 'spend',
+          title: `Mua gói ${order.plan || 'Locket Gold'} qua SePay` + (order.username ? ` cho @${order.username}` : ''),
+          targetUser: order.username || '',
+          amount: order.amount,
+          status: order.status === 'success' ? 'success' : 'failed',
+          time: Date.now()
+        });
+
         return json({ success: true });
+      }
+
+      // ─────────────────────────────────────────────
+      // CHECK WARRANTY / ELIGIBILITY FOR 0đ UPGRADE
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/check-warranty") {
+        const { username } = await request.json();
+        if (!username) return json({ success: false, message: "Vui lòng nhập Username Locket!" }, 400);
+
+        const cleanUname = username.trim().replace("@", "").toLowerCase();
+        const foundOrder = await findUserPurchaseOrder(env, cleanUname);
+
+        if (foundOrder) {
+          return json({
+            success: true,
+            eligible: true,
+            message: `Tài khoản @${cleanUname} hợp lệ để bảo hành / kích hoạt lại Gold 0đ!`,
+            order: foundOrder
+          });
+        } else {
+          return json({
+            success: true,
+            eligible: false,
+            message: `Không tìm thấy lịch sử mua hàng cho tài khoản @${cleanUname}. Vui lòng mua gói trước!`
+          });
+        }
+      }
+
+      // ─────────────────────────────────────────────
+      // CLAIM WARRANTY 0đ (KÍCH HOẠT BẢO HÀNH)
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/claim-warranty") {
+        const { username } = await request.json();
+        if (!username) return json({ success: false, message: "Vui lòng nhập Username Locket!" }, 400);
+
+        const cleanUname = username.trim().replace("@", "").toLowerCase();
+        const foundOrder = await findUserPurchaseOrder(env, cleanUname);
+
+        if (!foundOrder) {
+          return json({ success: false, message: `Tài khoản @${cleanUname} chưa từng mua gói nên không thể bảo hành 0đ!` }, 400);
+        }
+
+        try {
+          const kickRes = await fetch("https://twilight-mountain-96b6.caovannamutt.workers.dev/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "kick", username: cleanUname })
+          });
+          const kickData = await kickRes.json().catch(() => ({ success: kickRes.ok }));
+          const isSuccess = kickData.success || kickRes.ok;
+
+          if (isSuccess) {
+            const orderId = "BH" + Date.now().toString(36).toUpperCase().slice(-6);
+            const order = {
+              orderId, username: cleanUname, plan: 'Bảo Hành Gold (0đ)', amount: 0,
+              payMethod: 'warranty', status: 'success',
+              created_at: Date.now(), paid_at: Date.now()
+            };
+            if (env.LOCKET_ORDERS) {
+              await env.LOCKET_ORDERS.put(`order_${orderId}`, JSON.stringify(order));
+            }
+            await recordUserTransaction(env, cleanUname, {
+              id: orderId,
+              type: 'spend',
+              title: `Bảo hành Locket Gold (0đ)`,
+              targetUser: cleanUname,
+              amount: 0,
+              status: 'success',
+              time: Date.now()
+            });
+
+            return json({
+              success: true,
+              message: `✅ Kích hoạt bảo hành Gold 0đ thành công cho @${cleanUname}!`,
+              name: kickData.name || cleanUname,
+              username: cleanUname
+            });
+          } else {
+            return json({ success: false, message: kickData.error || kickData.message || "Máy chủ Locket đang bận. Vui lòng thử lại sau giây lát!" });
+          }
+        } catch(e) {
+          return json({ success: false, message: "Lỗi kết nối máy chủ Locket: " + e.message });
+        }
+      }
+
+      // ─────────────────────────────────────────────
+      // USER: Lấy lịch sử giao dịch cá nhân
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/user-transactions") {
+        let user = await getUserFromToken(request, env);
+        const urlObj = new URL(request.url);
+        const fallbackUsername = urlObj.searchParams.get("username");
+
+        if (!user && fallbackUsername) {
+          const userKey = `user_${fallbackUsername.toLowerCase()}`;
+          const raw = await env.LOCKET_USERS.get(userKey);
+          if (raw) user = JSON.parse(raw);
+        }
+
+        if (!user) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const key = `user_tx_${user.username.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(key);
+        const txs = raw ? JSON.parse(raw) : [];
+
+        return json({ success: true, txs: txs, username: user.username });
+      }
+
+      // ─────────────────────────────────────────────
+      // ADMIN: Lấy lịch sử giao dịch của 1 User
+      // ─────────────────────────────────────────────
+      if (request.method === "GET" && path === "/api/admin-user-transactions") {
+        if (!await verifyAdminToken(request, env)) return json({ success: false, message: "Unauthorized" }, 401);
+
+        const urlObj = new URL(request.url);
+        const targetUsername = urlObj.searchParams.get("username") || "";
+
+        if (!targetUsername) return json({ success: false, message: "Vui lòng truyền username" }, 400);
+
+        const key = `user_tx_${targetUsername.toLowerCase()}`;
+        const raw = await env.LOCKET_USERS.get(key);
+        const txs = raw ? JSON.parse(raw) : [];
+
+        return json({ success: true, txs: txs, username: targetUsername });
       }
 
       // ─────────────────────────────────────────────
@@ -649,4 +801,83 @@ async function verifyAdminToken(request, env) {
   if (!token) return false;
   const val = await env.LOCKET_USERS.get(`admin_token_${token}`);
   return val === "1";
+}
+
+async function recordUserTransaction(env, username, tx) {
+  if (!env || !env.LOCKET_USERS || !username) return;
+  try {
+    const key = `user_tx_${username.toLowerCase()}`;
+    const raw = await env.LOCKET_USERS.get(key);
+    let txList = raw ? JSON.parse(raw) : [];
+    txList.unshift({
+      id: tx.id || "TX" + Date.now().toString(36).toUpperCase(),
+      type: tx.type || "spend",
+      title: tx.title || "Giao dịch Locket",
+      targetUser: tx.targetUser || "",
+      amount: Number(tx.amount) || 0,
+      status: tx.status || "success",
+      time: tx.time || Date.now()
+    });
+    if (txList.length > 100) txList = txList.slice(0, 100);
+    await env.LOCKET_USERS.put(key, JSON.stringify(txList));
+  } catch(e) {}
+}
+
+async function findUserPurchaseOrder(env, username) {
+  const cleanUname = (username || "").trim().replace("@", "").toLowerCase();
+  if (!cleanUname) return null;
+
+  if (env.LOCKET_ORDERS) {
+    try {
+      const listResult = await env.LOCKET_ORDERS.list({ prefix: "order_", limit: 500 });
+      for (const key of listResult.keys) {
+        const raw = await env.LOCKET_ORDERS.get(key.name);
+        if (raw) {
+          const o = JSON.parse(raw);
+          if (!o) continue;
+          const uname = (o.username || o.targetUser || "").toLowerCase();
+          const title = (o.title || o.plan || "").toLowerCase();
+          const isMatch = uname === cleanUname || uname.includes(cleanUname) || title.includes("@" + cleanUname) || title.includes(cleanUname);
+          const isSuccess = !o.status || o.status === "success" || o.status === "paid" || o.status === "active";
+          if (isMatch && isSuccess) {
+            return o;
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (env.LOCKET_USERS) {
+    try {
+      const directRaw = await env.LOCKET_USERS.get(`user_tx_${cleanUname}`);
+      if (directRaw) {
+        const txs = JSON.parse(directRaw);
+        const spendTx = txs.find(t => t.type === 'spend' && (t.status === 'success' || !t.status));
+        if (spendTx) {
+          return { orderId: spendTx.id, plan: spendTx.title, amount: spendTx.amount, created_at: spendTx.time };
+        }
+      }
+
+      const listUsers = await env.LOCKET_USERS.list({ prefix: "user_tx_", limit: 200 });
+      for (const key of listUsers.keys) {
+        const raw = await env.LOCKET_USERS.get(key.name);
+        if (raw) {
+          const txs = JSON.parse(raw);
+          if (Array.isArray(txs)) {
+            for (const t of txs) {
+              if (t.type === 'spend' && (t.status === 'success' || !t.status)) {
+                const target = (t.targetUser || "").toLowerCase();
+                const title = (t.title || "").toLowerCase();
+                if (target === cleanUname || title.includes("@" + cleanUname) || title.includes(cleanUname)) {
+                  return { orderId: t.id, plan: t.title, amount: t.amount, created_at: t.time };
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  return null;
 }

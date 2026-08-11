@@ -284,7 +284,7 @@
         });
         if (username) params.set('username', username);
 
-        window.location.href = './upgrade.html?' + params.toString();
+        window.location.href = '/upgrade/?' + params.toString();
     };
     function openPayment(planId, planName, price, duration, os) {
         window.openPayment(planId, planName, price, duration, os);
@@ -530,7 +530,7 @@
     }
 
     function redirectAfterPurchase() {
-        window.location.href = 'activate.html';
+        window.location.href = '/activate';
     }
 
 
@@ -583,7 +583,7 @@
             modal.style.display = 'block';
             document.body.style.overflow = 'hidden';
         } else {
-            window.location.href = 'index.html#reviews';
+            window.location.href = '/#reviews';
         }
     }
 
@@ -968,14 +968,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (userStr) {
         try {
             const user = JSON.parse(userStr);
-            const loginLinks = document.querySelectorAll('a[href="login.html"]');
+            const loginLinks = document.querySelectorAll('a[href="/login"], a[href="/login/"], a[href="login.html"]');
             
             loginLinks.forEach(link => {
                 const isMobile = link.closest('.lg\\:hidden') !== null || link.closest('#mobile-auth-slot') !== null;
                 if (isMobile) {
                     link.outerHTML = `
                         <div class="flex flex-col gap-2">
-                            <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-800 dark:text-zinc-200 bg-amber-400/15 dark:bg-zinc-800 border border-amber-400/30">
+                            <a href="/profile/" class="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold rounded-xl text-slate-800 dark:text-zinc-200 bg-amber-400/15 dark:bg-zinc-800 border border-amber-400/30">
                                 <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=f59e0b&color=fff&rounded=true" class="w-6 h-6 rounded-full object-cover shrink-0" />
                                 <span class="truncate">Hi, <strong>${user.username}</strong></span>
                             </a>
@@ -994,15 +994,15 @@ document.addEventListener('DOMContentLoaded', () => {
 </button>
 
 <div x-show="open" @click.away="open = false" style="display: none;" class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-100 dark:border-zinc-800 py-2 z-50 flex flex-col">
-    <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="/profile/" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         Hồ sơ cá nhân
     </a>
-    <a href="activate.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="/activate/" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
         Đăng ký gói VIP
     </a>
-    <a href="profile.html" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
+    <a href="/profile/" class="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors">
         <svg fill="none" class="w-4 h-4 opacity-70" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         Lịch sử đơn hàng
     </a>

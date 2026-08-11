@@ -801,15 +801,15 @@
   </div>
   <div @scroll.window="scrolled = (window.pageYOffset &gt; 20) || false" class="relative z-50" x-data="{ mobileOpen: false, notifOpen: false, notifDetail: null, scrolled: false }">
    <header :class="scrolled ? 'bg-[#fffdc4]/95 dark:bg-[#09090b]/95 backdrop-blur-md shadow-sm border-b border-accent/15 dark:border-zinc-800' : 'bg-transparent border-transparent'" class="hidden lg:flex fixed top-0 left-0 right-0 h-20 z-50 items-center px-6 transition-all duration-300 bg-[#fffdc4]/95 dark:bg-[#09090b]/95 backdrop-blur-md shadow-sm border-b border-accent/15 dark:border-zinc-800">
-    <a class="flex items-center shrink-0" href="index.html">
+    <a class="flex items-center shrink-0" href="/">
      <img alt="Locket Gold" class="w-12 h-12 object-contain" src="/assets/images/logo-locket.png">
      <img alt="Locket Gold" class="h-10 object-contain ml-1" src="/assets/images/logo-chuky.png">
     </a>
     <nav class="flex-1 flex items-center justify-center gap-1 mx-8">
-     <a class="px-4 py-2 text-[15px] font-semibold transition-all whitespace-nowrap text-accent dark:text-white relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-[60%] after:h-[2.5px] after:bg-accent after:rounded-t-full" href="index.html">
+     <a class="px-4 py-2 text-[15px] font-semibold transition-all whitespace-nowrap text-accent dark:text-white relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-[60%] after:h-[2.5px] after:bg-accent after:rounded-t-full" href="/">
       Trang chủ
      </a>
-     <a class="px-4 py-2 text-[15px] font-semibold transition-all whitespace-nowrap text-text-muted dark:text-zinc-400 hover:text-accent dark:hover:text-white relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 hover:after:w-[60%] after:h-[2.5px] after:bg-accent/60 after:rounded-t-full after:transition-all after:duration-300" href="activate.html">
+     <a class="px-4 py-2 text-[15px] font-semibold transition-all whitespace-nowrap text-text-muted dark:text-zinc-400 hover:text-accent dark:hover:text-white relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 hover:after:w-[60%] after:h-[2.5px] after:bg-accent/60 after:rounded-t-full after:transition-all after:duration-300" href="/activate">
       Kích hoạt
      </a>
      <a class="px-4 py-2 text-[15px] font-semibold transition-all whitespace-nowrap text-text-muted dark:text-zinc-400 hover:text-accent dark:hover:text-white relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 hover:after:w-[60%] after:h-[2.5px] after:bg-accent/60 after:rounded-t-full after:transition-all after:duration-300" href="#pricing">
@@ -893,7 +893,7 @@
      </div>
     </div>
     <div class="relative shrink-0" x-data="{ open: false }">
-     <a class="flex items-center justify-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dark text-white text-sm font-semibold rounded-full shadow-sm transition-all" href="login.html">
+     <a class="flex items-center justify-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dark text-white text-sm font-semibold rounded-full shadow-sm transition-all" href="/login/">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
        <path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round">
        </path>
@@ -905,7 +905,7 @@
    <div class="lg:hidden">
     <header :class="scrolled ? 'bg-[#fffdc4]/95 dark:bg-[#09090b]/95 backdrop-blur-md border-b border-accent/15 dark:border-zinc-800 shadow-sm' : 'bg-transparent border-transparent'" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-[#fffdc4]/95 dark:bg-[#09090b]/95 backdrop-blur-md border-b border-accent/15 dark:border-zinc-800 shadow-sm">
      <div class="flex items-center justify-between h-14 px-4">
-      <a class="flex items-center gap-1.5" href="index.html">
+      <a class="flex items-center gap-1.5" href="/">
        <img alt="Locket Gold" class="w-8 h-8 object-contain" src="/assets/images/logo-locket.png">
        <img alt="Locket Gold" class="h-7 object-contain" src="/assets/images/logo-chuky.png">
       </a>
@@ -1002,14 +1002,14 @@
       </button>
      </div>
      <nav class="flex-1 p-5 space-y-1">
-      <a @click="mobileOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-accent dark:text-white bg-[#fbba00]/15 dark:bg-zinc-800/80 shadow-[inset_0_1px_2px_rgba(251,186,0,0.1)]" href="index.html">
+      <a @click="mobileOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-accent dark:text-white bg-[#fbba00]/15 dark:bg-zinc-800/80 shadow-[inset_0_1px_2px_rgba(251,186,0,0.1)]" href="/">
        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" stroke-linecap="round" stroke-linejoin="round">
         </path>
        </svg>
        Trang chủ
       </a>
-      <a @click="mobileOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-text-muted dark:text-zinc-400 hover:text-text dark:hover:text-white hover:bg-primary-dark/40 dark:hover:bg-zinc-800/50" href="activate.html">
+      <a @click="mobileOpen = false" class="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all text-text-muted dark:text-zinc-400 hover:text-text dark:hover:text-white hover:bg-primary-dark/40 dark:hover:bg-zinc-800/50" href="/activate">
        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round">
         </path>
@@ -1031,7 +1031,7 @@
        Hỗ trợ
       </a>
       <div class="pt-3 mt-2 border-t border-accent/20 dark:border-zinc-800" id="mobile-auth-slot">
-       <a class="flex items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent-dark text-white text-sm font-semibold rounded-xl shadow-md transition-all" href="login.html">
+       <a class="flex items-center justify-center gap-2 px-4 py-3 bg-accent hover:bg-accent-dark text-white text-sm font-semibold rounded-xl shadow-md transition-all" href="/login/">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
          <path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round">
          </path>
@@ -4146,7 +4146,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
      <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-8 lg:gap-12">
       <div class="sm:col-span-2 lg:col-span-2">
-       <a class="text-xl font-bold text-text flex items-center gap-2 mb-4" href="index.html">
+       <a class="text-xl font-bold text-text flex items-center gap-2 mb-4" href="/">
         <img alt="Logo LocketGold" class="w-7 h-7 object-contain" decoding="async" loading="lazy" src="/assets/images/logo-locket.png">
         Locket
         <span class="text-accent">
@@ -4201,7 +4201,7 @@
        </h4>
        <ul class="space-y-2.5">
         <li>
-         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="activate.html">
+         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="/activate">
           Kích hoạt Locket Gold
          </a>
         </li>
@@ -4216,7 +4216,7 @@
          </a>
         </li>
         <li>
-         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="activate.html">
+         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="/activate">
           Hướng dẫn sử dụng
          </a>
         </li>
@@ -4233,7 +4233,7 @@
          </a>
         </li>
         <li>
-         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="activate.html">
+         <a class="text-sm text-text-muted hover:text-accent transition-colors" href="/activate">
           Hướng dẫn nâng cấp
          </a>
         </li>
@@ -4540,14 +4540,14 @@
      <div class="upgrade-tooltip">
       Nâng Gold ở đây nè!
      </div>
-     <a class="premium-btn" href="activate.html">
+     <a class="premium-btn" href="/activate/">
       <img alt="Locket Gold" src="/assets/images/logo-locket.png" style="width: 32px; height: 32px; object-fit: contain; border-radius: 50%;">
      </a>
      <span class="gold-label">
       Locket Gold
      </span>
     </div>
-    <a class="nav-item" href="activate.html">
+    <a class="nav-item" href="/#how-to-upgrade">
      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round">
       </path>
@@ -4556,7 +4556,7 @@
       Hướng dẫn
      </span>
     </a>
-    <a class="nav-item" href="profile.html">
+    <a class="nav-item" href="/profile/">
      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round">
       </path>
