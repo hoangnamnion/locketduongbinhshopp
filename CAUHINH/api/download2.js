@@ -27,24 +27,24 @@ function makeContentDisposition(filename) {
 }
 
 export default function handler(req, res) {
-  const { data } = req.query || {};
+  const { data, name } = req.query || {};
 
-  if (!data) {
-    return res.status(400).send('Thiếu dữ liệu');
+  let decoded = null;
+  if (data) {
+    try {
+      decoded = JSON.parse(Buffer.from(data, 'base64').toString());
+    } catch {
+      try {
+        decoded = JSON.parse(Buffer.from(decodeURIComponent(data), 'base64').toString());
+      } catch {}
+    }
   }
 
-  let decoded;
-  try {
-    decoded = JSON.parse(Buffer.from(data, 'base64').toString());
-  } catch {
-    return res.status(400).send('Dữ liệu không hợp lệ');
+  if (!decoded || typeof decoded !== 'object') {
+    decoded = { name: name || 'Khách VIP', exp: Date.now() + 86400000 };
   }
 
-  if (Date.now() > decoded.exp) {
-    return res.status(410).send('Hết hạn');
-  }
-
-  const rawName = String(decoded.name || 'Khách').trim() || 'Khách';
+  const rawName = String(decoded.name || name || 'Khách VIP').trim() || 'Khách VIP';
   const displayName = escapeXml(rawName);
   const safeSlug = makeAsciiSlug(rawName);
 

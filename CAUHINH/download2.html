@@ -416,6 +416,8 @@
             }
         }
 
+        let decodedObj = null;
+
         async function init() {
             const warning = getDeviceBrowserWarning();
             if (warning) {
@@ -428,28 +430,32 @@
                 return;
             }
 
-            if (!data) return showError("❌ LINK KHÔNG HỢP LỆ");
+            let userName = "Khách VIP";
+            const urlParams = new URLSearchParams(window.location.search);
+            const nameParam = urlParams.get('name') || urlParams.get('username');
 
-            try {
-                let decoded = JSON.parse(safeDecodeB64(data));
-
-                // Thay tên động
-                const userName = decoded.name || "Khách VIP";
-                document.getElementById("greetingBox").innerHTML = `Xin chào, <b>${userName}</b> 👋<br>Đây là hướng dẫn dành riêng cho bạn.`;
-                document.getElementById("footerText").innerHTML = `<p>Link này dành riêng cho ${userName}.</p>`;
-
-                // Kiểm tra hết hạn
-                if (Date.now() > decoded.exp) {
-                    return showError("❌ LIÊN KẾT ĐÃ HẾT HẠN<br><span style='font-size: 12px; font-weight: normal; color: #ccc'>Vui lòng liên hệ Admin để lấy link mới.</span>");
-                }
-
-                // Bật nút tải và đếm ngược
-                setupDownloadButton();
-                startCountdown(decoded.exp);
-
-            } catch (e) {
-                showError("❌ DỮ LIỆU KHÔNG HỢP LỆ");
+            if (data) {
+                try {
+                    decodedObj = JSON.parse(safeDecodeB64(data));
+                    if (decodedObj && decodedObj.name) userName = decodedObj.name;
+                } catch (e) {}
+            } else if (nameParam) {
+                userName = nameParam;
             }
+
+            decodedObj = decodedObj || { name: userName, exp: Date.now() + 86400000 };
+
+            document.getElementById("greetingBox").innerHTML = `Xin chào, <b>${userName}</b> 👋<br>Đây là hướng dẫn dành riêng cho bạn.`;
+            document.getElementById("footerText").innerHTML = `<p>Link này dành riêng cho ${userName}.</p>`;
+
+            // Kiểm tra hết hạn
+            if (decodedObj.exp && Date.now() > decodedObj.exp) {
+                return showError("❌ LIÊN KẾT ĐÃ HẾT HẠN<br><span style='font-size: 12px; font-weight: normal; color: #ccc'>Vui lòng liên hệ Admin để lấy link mới.</span>");
+            }
+
+            // Bật nút tải và đếm ngược
+            setupDownloadButton();
+            if (decodedObj.exp) startCountdown(decodedObj.exp);
         }
 
         function showError(msg) {
@@ -462,21 +468,130 @@
             if (timerInterval) clearInterval(timerInterval);
         }
 
+        function generateMobileconfigXml(rawName) {
+            const displayName = String(rawName || "Khách VIP").replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const safeSlug = String(rawName || "Khach").normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '_') || "Khach";
+
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>DNSSettings</key>
+            <dict>
+                <key>DNSProtocol</key>
+                <string>HTTPS</string>
+                <key>ServerAddresses</key>
+                <array>
+                    <string>1.1.1.1</string>
+                    <string>1.0.0.1</string>
+                    <string>45.90.28.0</string>
+                    <string>45.90.30.0</string>
+                    <string>2a07:a8c0::</string>
+                    <string>2a07:a8c1::</string>
+                </array>
+                <key>ServerURL</key>
+                <string>https://dns.adguard.com/dns-query</string>
+                
+                <key>SupplementalMatchDomains</key>
+                <array>
+                    <string>certs.apple.com</string>
+                    <string>crl.apple.com</string>
+                    <string>ocsp.apple.com</string>
+                    <string>ocsp2.apple.com</string>
+                    <string>valid.apple.com</string>
+                    <string>crl3.digicert.com</string>
+                    <string>crl4.digicert.com</string>
+                    <string>ocsp.digicert.cn</string>
+                    <string>ocsp.digicert.com</string>
+                    
+                    <string>api.revenuecat.com</string>
+                    <string>app.revenuecat.com</string>
+                    <string>in.appcenter.ms</string>
+                    <string>app-measurement.com</string>
+                    <string>firebaselogging-pa.googleapis.com</string>
+                    <string>mixpanel.com</string>
+                    <string>api.mixpanel.com</string>
+                </array>
+            </dict>
+            <key>OnDemandRules</key>
+            <array>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>WiFi</string>
+                </dict>
+                <dict>
+                    <key>Action</key>
+                    <string>Connect</string>
+                    <key>InterfaceTypeMatch</key>
+                    <string>Cellular</string>
+                </dict>
+            </array>
+            <key>PayloadDescription</key>
+            <string>Configures device to use Locket VIP Freeze DNS</string>
+            <key>PayloadDisplayName</key>
+            <string>Locket VIP - ${displayName}</string>
+            <key>PayloadIdentifier</key>
+            <string>com.apple.dnsSettings.managed.locketvip.${safeSlug}</string>
+            <key>PayloadType</key>
+            <string>com.apple.dnsSettings.managed</string>
+            <key>PayloadUUID</key>
+            <string>C3D4E5F6-7890-1234-5678-90ABCDEF1234</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDescription</key>
+    <string>Chức Năng:
+✔️ Hỗ Trợ Không Bị Mất Locket Gold
+_Dương Bình Đẹp Zai_ </string>
+    <key>PayloadDisplayName</key>
+    <string>💛 Locket Gold VIP (Vĩnh Viễn) - ${displayName}</string>
+    <key>PayloadIdentifier</key>
+    <string>com.p12.locket.vip</string>
+    <key>PayloadOrganization</key>
+    <string>By Duong Binh Vip</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>21098765-4321-DCBA-0F12-4567890ABCDE</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>`;
+        }
+
         function setupDownloadButton() {
             const btn = document.getElementById("downloadBtn");
             btn.style.display = "block";
             btn.onclick = () => {
-                btn.innerHTML = "⏳ Đang mở file cấu hình...";
+                btn.innerHTML = "⏳ Đang tải file cấu hình...";
                 btn.style.pointerEvents = "none";
 
-                // Gọi tới /api/download2 cho Locket VIP
-                const url = "https://shopbanhanglkduongbinh.caovannamutt.workers.dev/api/download2?data=" + encodeURIComponent(data);
-                window.location.assign(url);
+                try {
+                    const name = decodedObj?.name || "Khách VIP";
+                    const xmlContent = generateMobileconfigXml(name);
+                    const blob = new Blob([xmlContent], { type: "application/x-apple-aspen-config; charset=utf-8" });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    const link = document.createElement("a");
+                    link.href = blobUrl;
+                    link.download = `${name}_DNS_Locket_Gold.mobileconfig`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch(e) {}
 
                 setTimeout(() => {
                     btn.innerHTML = "⬇️ Tải Profile VIP";
                     btn.style.pointerEvents = "auto";
-                }, 2500);
+                }, 1500);
             };
         }
 

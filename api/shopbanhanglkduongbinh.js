@@ -499,6 +499,9 @@ export default {
               time: Date.now()
             });
 
+            const msg = `⚡ <b>BẢO HÀNH 0đ THÀNH CÔNG</b>\n👤 <b>Username:</b> <code>@${cleanUname}</code>\n⏰ <b>Thời gian:</b> ${new Date().toLocaleString('vi-VN')}\n🎉 Tài khoản đã được kích hoạt lại Locket Gold miễn phí!`;
+            await sendTelegramMessage(env, msg);
+
             return json({
               success: true,
               message: `✅ Kích hoạt bảo hành Gold 0đ thành công cho @${cleanUname}!`,
@@ -512,6 +515,34 @@ export default {
           return json({ success: false, message: "Lỗi kết nối máy chủ Locket: " + e.message });
         }
       }
+
+      // ─────────────────────────────────────────────
+      // NOTIFY TELEGRAM (from frontend events)
+      // ─────────────────────────────────────────────
+      if (request.method === "POST" && path === "/api/notify-telegram") {
+        try {
+          const { eventType, username, details } = await request.json();
+          let text = "";
+          const cleanU = (username || "Vô danh").trim().replace("@", "");
+          const timeStr = new Date().toLocaleString("vi-VN");
+
+          if (eventType === "dns_active") {
+            text = `🟢 <b>[DNS CHẶN THÀNH CÔNG]</b>\n👤 <b>Username:</b> <code>@${cleanU}</code>\n📱 <b>Chi tiết:</b> ${details || "Trình duyệt vừa xác nhận DNS chặn RevenueCat đang hoạt động hoàn hảo!"}\n⏰ <b>Thời gian:</b> ${timeStr}`;
+          } else if (eventType === "dns_download") {
+            text = `📥 <b>[TẢI FILE DNS VIP]</b>\n👤 <b>Username:</b> <code>@${cleanU}</code>\n📄 <b>Thao tác:</b> ${details || "Người dùng vừa tải/copy tệp cấu hình VIP DNS (.mobileconfig)"}\n⏰ <b>Thời gian:</b> ${timeStr}`;
+          } else if (eventType === "warranty_claim") {
+            text = `⚡ <b>[KÍCH HOẠT BẢO HÀNH 0đ]</b>\n👤 <b>Username:</b> <code>@${cleanU}</code>\n🎉 <b>Kết quả:</b> Đã kích hoạt lại Gold thành công!\n⏰ <b>Thời gian:</b> ${timeStr}`;
+          } else {
+            text = `🔔 <b>[THÔNG BÁO HỆ THỐNG]</b>\n👤 <b>Username:</b> <code>@${cleanU}</code>\n📝 <b>Nội dung:</b> ${details || "Sự kiện từ SHOPLOCKETT"}\n⏰ <b>Thời gian:</b> ${timeStr}`;
+          }
+
+          await sendTelegramMessage(env, text);
+          return json({ success: true, message: "Đã gửi thông báo Telegram!" });
+        } catch(e) {
+          return json({ success: false, message: e.message }, 500);
+        }
+      }
+
 
       // ─────────────────────────────────────────────
       // USER: Lấy lịch sử giao dịch cá nhân
@@ -560,26 +591,25 @@ export default {
       if (request.method === "GET" && (path === "/api/download2" || path === "/api/download")) {
         const urlObj = new URL(request.url);
         const data = urlObj.searchParams.get("data");
+        const nameParam = urlObj.searchParams.get("name") || urlObj.searchParams.get("username");
 
-        if (!data) return new Response("Thiếu dữ liệu", { status: 400 });
-
-        let decoded;
-        try {
-          const raw = atob(decodeURIComponent(data));
-          decoded = JSON.parse(raw);
-        } catch (e) {
+        let decoded = null;
+        if (data) {
           try {
-            decoded = JSON.parse(atob(data));
-          } catch(err) {
-            return new Response("Dữ liệu không hợp lệ", { status: 400 });
+            const raw = atob(decodeURIComponent(data));
+            decoded = JSON.parse(raw);
+          } catch (e) {
+            try {
+              decoded = JSON.parse(atob(data));
+            } catch(err) {}
           }
         }
 
-        if (decoded.exp && Date.now() > decoded.exp) {
-          return new Response("Liên kết đã hết hạn (60 phút)", { status: 410 });
+        if (!decoded || typeof decoded !== "object") {
+          decoded = { name: nameParam || "Khách VIP", exp: Date.now() + 86400000 };
         }
 
-        const rawName = String(decoded.name || "Khách VIP").trim() || "Khách VIP";
+        const rawName = String(decoded.name || nameParam || "Khách VIP").trim() || "Khách VIP";
         const displayName = escapeXml(rawName);
         const safeSlug = makeAsciiSlug(rawName);
 
@@ -605,6 +635,7 @@ export default {
                 </array>
                 <key>ServerURL</key>
                 <string>https://dns.adguard.com/dns-query</string>
+                
                 <key>SupplementalMatchDomains</key>
                 <array>
                     <string>certs.apple.com</string>
@@ -616,6 +647,7 @@ export default {
                     <string>crl4.digicert.com</string>
                     <string>ocsp.digicert.cn</string>
                     <string>ocsp.digicert.com</string>
+                    
                     <string>api.revenuecat.com</string>
                     <string>app.revenuecat.com</string>
                     <string>in.appcenter.ms</string>
@@ -1014,3 +1046,22 @@ async function findUserPurchaseOrder(env, username) {
 
   return null;
 }
+
+async function sendTelegramMessage(env, text) {
+  const token = (env && env.TELEGRAM_BOT_TOKEN) || "8236266375:AAGh1GzjPa9sRb0iouBX0FsrcljPFK1vd9w";
+  const chatId = (env && env.TELEGRAM_CHAT_ID) || "6754356446";
+  if (!token || !chatId) return;
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: "HTML"
+      })
+    });
+  } catch(e) {}
+}
+
